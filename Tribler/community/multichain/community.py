@@ -43,12 +43,12 @@ class MultiChainScheduler:
 
     # The amount of bytes that the Scheduler will be altruistic about and allows to be outstanding.
     threshold = 10 * MEGA_DIVIDER
-    
+
     # Counter decay settings
     decay_interval = 120.0
     decay_factor = 0.95
     decay_threshold = 0.1 * MEGA_DIVIDER
-     
+
     def __init__(self, community):
         """
         Create the MultiChainScheduler
@@ -356,13 +356,13 @@ class MultiChainCommunity(Community):
                             destination=(candidate,),
                             payload=(sequence_number,))
         self.dispersy.store_update_forward([message], False, False, True)
-    
+
     def received_crawl_request(self, messages):
         for message in messages:
-            self.logger.info("Crawler: Received crawl request from node %s, from sequence number %d" % 
+            self.logger.info("Crawler: Received crawl request from node %s, from sequence number %d" %
                              (base64.encodestring(message.candidate.get_member().mid).strip(), message.payload.requested_sequence_number))
             self.crawl_requested(message.candidate, message.payload.requested_sequence_number)
-    
+
     def crawl_requested(self, candidate, sequence_number):
         blocks = self.persistence.get_blocks_since(self._mid, sequence_number)
         if len(blocks) > 0:
@@ -387,7 +387,7 @@ class MultiChainCommunity(Community):
             # This is slightly worrying since the last block should always be returned.
             # Or rather, the other side is requesting blocks starting from a point in the future.
             self.logger.info("Crawler: No blocks")
-        
+
     def received_crawl_response(self, messages):
         self.logger.info("Crawler: Valid %d block response(s) received." % len(messages))
         for message in messages:
@@ -405,7 +405,7 @@ class MultiChainCommunity(Community):
         self.logger.info("Crawler: Valid %s crawl resumptions received." % len(messages))
         for message in messages:
             self.send_crawl_request(message.candidate)
-        
+
 
     def get_key(self):
         return self._ec
