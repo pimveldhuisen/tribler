@@ -75,46 +75,46 @@ class TestMultiChainScheduler(BaseTestCase):
         self.community = None
         self.scheduler = None
 
-    def test_update_amount_send_empty(self):
+    def test_update_amount_sent_empty(self):
         """
         The scheduler can track the amount for a new candidate.
         """
         # Arrange
         amount = self.data_threshold / 2
         # Act
-        self.scheduler.update_amount_send(self.peer1, amount)
+        self.scheduler.update_amount_sent(self.peer1, amount)
         # Assert
-        self.assertEqual(amount, self.scheduler._outstanding_amount_send[self.peer1])
+        self.assertEqual(amount, self.scheduler._outstanding_amount_sent[self.peer1])
 
-    def test_update_amount_send_add(self):
+    def test_update_amount_sent_add(self):
         """
         The scheduler can track the amount when adding to a previous amount.
         """
         # Arrange
         first_amount = (self.data_threshold - 10) / 2
         second_amount = (self.data_threshold - 10) / 2
-        self.scheduler.update_amount_send(self.peer1, first_amount)
+        self.scheduler.update_amount_sent(self.peer1, first_amount)
         # Act
-        self.scheduler.update_amount_send(self.peer1, second_amount)
+        self.scheduler.update_amount_sent(self.peer1, second_amount)
         # Assert
         self.assertEqual(first_amount+second_amount,
-                         self.scheduler._outstanding_amount_send[self.peer1])
+                         self.scheduler._outstanding_amount_sent[self.peer1])
         self.assertFalse(self.community.signature_requested)
 
-    def test_update_amount_send_above_threshold(self):
+    def test_update_amount_sent_above_threshold(self):
         """
         The scheduler schedules a signature request if the amount is above the threshold.
         """
         # Arrange
         amount = self.data_threshold + 1000000
         # Act
-        self.scheduler.update_amount_send(self.peer1, amount)
+        self.scheduler.update_amount_sent(self.peer1, amount)
         # Assert
         """ No amount should be left open. """
-        self.assertEqual(0, self.scheduler._outstanding_amount_send[self.peer1])
+        self.assertEqual(0, self.scheduler._outstanding_amount_sent[self.peer1])
         self.assertTrue(self.community.signature_requested)
 
-    def test_update_amount_send_remainder(self):
+    def test_update_amount_sent_remainder(self):
         """
         The scheduler should remember a remainder after converting to MB.
         """
@@ -122,12 +122,12 @@ class TestMultiChainScheduler(BaseTestCase):
         remainder = 250
         amount = self.data_threshold + remainder
         # Act
-        self.scheduler.update_amount_send(self.peer1, amount)
+        self.scheduler.update_amount_sent(self.peer1, amount)
         # Assert
         """ The remainder should be left open. """
-        self.assertEqual(remainder, self.scheduler._outstanding_amount_send[self.peer1])
+        self.assertEqual(remainder, self.scheduler._outstanding_amount_sent[self.peer1])
 
-    def test_update_amount_send_failed(self):
+    def test_update_amount_sent_failed(self):
         """
         The scheduler schedules a signature request but fails and should remember the amount.
         """
@@ -135,10 +135,10 @@ class TestMultiChainScheduler(BaseTestCase):
         amount = self.data_threshold + 10
         self.community.publish_success = False
         # Act
-        self.scheduler.update_amount_send(self.peer1, amount)
+        self.scheduler.update_amount_sent(self.peer1, amount)
         # Assert
         """ The whole amount should be left open."""
-        self.assertEqual(amount, self.scheduler._outstanding_amount_send[self.peer1])
+        self.assertEqual(amount, self.scheduler._outstanding_amount_sent[self.peer1])
         self.assertTrue(self.community.signature_requested)
 
     def test_update_amount_received_empty(self):
@@ -187,7 +187,7 @@ class TestMultiChainScheduler(BaseTestCase):
         # Arrange
         sent = 4
         received = 4
-        self.scheduler.update_amount_send(self.peer1, sent * MultiChainScheduler.mega_divider)
+        self.scheduler.update_amount_sent(self.peer1, sent * MultiChainScheduler.mega_divider)
         self.scheduler.update_amount_received(self.peer1, received * MultiChainScheduler.mega_divider)
         # Act
         self.scheduler.schedule_block(self.peer1)
@@ -196,7 +196,7 @@ class TestMultiChainScheduler(BaseTestCase):
         self.assertEqual(sent, self.community.up)
         self.assertEqual(received, self.community.down)
         self.assertEqual(0, self.scheduler._outstanding_amount_received[self.peer1])
-        self.assertEqual(0, self.scheduler._outstanding_amount_send[self.peer1])
+        self.assertEqual(0, self.scheduler._outstanding_amount_sent[self.peer1])
 
     def test_schedule_block_negative(self):
         """
@@ -205,7 +205,7 @@ class TestMultiChainScheduler(BaseTestCase):
         # Arrange
         sent = 4
         received = 4
-        self.scheduler.update_amount_send(self.peer1, sent * MultiChainScheduler.mega_divider)
+        self.scheduler.update_amount_sent(self.peer1, sent * MultiChainScheduler.mega_divider)
         self.scheduler.update_amount_received(self.peer1, received * MultiChainScheduler.mega_divider)
         self.community.publish_success = False
         # Act
@@ -214,7 +214,7 @@ class TestMultiChainScheduler(BaseTestCase):
         self.assertEqual(sent * MultiChainScheduler.mega_divider,
                          self.scheduler._outstanding_amount_received[self.peer1])
         self.assertEqual(received * MultiChainScheduler.mega_divider,
-                         self.scheduler._outstanding_amount_send[self.peer1])
+                         self.scheduler._outstanding_amount_sent[self.peer1])
 
 
 class TestMultiChainCommunity(DispersyTestFunc):

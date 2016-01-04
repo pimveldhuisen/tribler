@@ -55,28 +55,28 @@ class MultiChainScheduler:
         :param community: The MultiChainCommunity that will be used to send requests.
         """
         """ Key: candidate's mid Value: amount of data not yet created into a block """
-        self._outstanding_amount_send = {}
+        self._outstanding_amount_sent = {}
         self._outstanding_amount_received = {}
         """ The MultiChainCommunity that will be used to send requests. """
         self._community = community
         self._community.register_task("decay counters", LoopingCall(self.decay_counters)).start(self.decay_interval, now=False)
 
-    def update_amount_send(self, peer, amount_send):
+    def update_amount_sent(self, peer, amount_sent):
         """
-        Update the amount of data send. If the amount is above the threshold, then a block will be created.
+        Update the amount of data sent. If the amount is above the threshold, then a block will be created.
         :param peer: (address, port) translated into a Candidate.
-        :param amount_send: amount of bytes send to the peer.
+        :param amount_sent: amount of bytes sent to the peer.
         :return: None
         """
-        self._community.logger.debug("Updating amount send for: %s amount:%s" % (peer[0], str(amount_send)))
-        total_amount_send = self._outstanding_amount_send.get(peer, 0) + amount_send
-        self._outstanding_amount_send[peer] = total_amount_send
-        if total_amount_send >= self.threshold:
+        self._community.logger.debug("Updating amount sent for: %s amount:%s" % (peer[0], str(amount_sent)))
+        total_amount_sent = self._outstanding_amount_sent.get(peer, 0) + amount_sent
+        self._outstanding_amount_sent[peer] = total_amount_sent
+        if total_amount_sent >= self.threshold:
             self.schedule_block(peer)
 
     def update_amount_received(self, peer, amount_received):
         """
-        Update the amount of data send. If the amount is above the threshold, then a block will be created.
+        Update the amount of data received. 
         :param peer: (address, port) translated into a Candidate.
         :param amount_received: amount of bytes received from a peer
         :return: None
@@ -91,18 +91,18 @@ class MultiChainScheduler:
         """
         candidate = self._community.get_candidate(peer)
         if candidate and candidate.get_member():
-            total_amount_send = self._outstanding_amount_send.get(peer, 0)
+            total_amount_sent = self._outstanding_amount_sent.get(peer, 0)
             total_amount_received = self._outstanding_amount_received.get(peer, 0)
             """ Convert to MB """
-            total_amount_sent_mb = total_amount_send / self.mega_divider
+            total_amount_sent_mb = total_amount_sent / self.mega_divider
             total_amount_received_mb = total_amount_received / self.mega_divider
-            """ Try to sent the request """
-            request_sent = self._community. \
+            """ Try to send the request """
+            request_is_sent = self._community. \
                 publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
-            if request_sent:
+            if request_is_sent:
                 """ Reset the outstanding amounts to the remainder
                 and send a signature request for the outstanding amount"""
-                self._outstanding_amount_send[peer] = total_amount_send % self.mega_divider
+                self._outstanding_amount_sent[peer] = total_amount_sent % self.mega_divider
                 self._outstanding_amount_received[peer] = total_amount_received % self.mega_divider
         else:
             self._community.logger.warn(
@@ -220,8 +220,8 @@ class MultiChainCommunity(Community):
     def publish_signature_request_message(self, candidate, up, down):
         """
         Creates and sends out a signed signature_request message if the chain is free for operations.
-        If it is the request is send and True is returned, else False.
-        :param candidate: The candidate that the signature request will send to.
+        If it is the request is sent and True is returned, else False.
+        :param candidate: The candidate that the signature request will be sent to.
         :param (int) up: The amount of bytes that have been sent to the candidate that need to signed.
         :param (int) down: The amount of bytes that have been received from the candidate that need to signed.
         return (bool) if request is sent.

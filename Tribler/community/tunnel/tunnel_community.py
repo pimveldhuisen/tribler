@@ -1291,21 +1291,21 @@ class TunnelCommunity(Community):
             _barter_statistics.dict_inc_bartercast(BartercastStatisticTypes.TUNNELS_BYTES_SENT, "%s:%s" %
                                                    (obj.first_hop[0], obj.first_hop[1]), num_bytes)
             if self.multichain_scheduler:
-                self.multichain_scheduler.update_amount_send((obj.first_hop[0], obj.first_hop[1]), num_bytes)
+                self.multichain_scheduler.update_amount_sent((obj.first_hop[0], obj.first_hop[1]), num_bytes)
         elif isinstance(obj, RelayRoute):
             obj.bytes_up += num_bytes
             self.stats['bytes_relay_up'] += num_bytes
             _barter_statistics.dict_inc_bartercast(BartercastStatisticTypes.TUNNELS_RELAY_BYTES_SENT, "%s:%s" %
                                                    (obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
             if self.multichain_scheduler:
-                self.multichain_scheduler.update_amount_send((obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
+                self.multichain_scheduler.update_amount_sent((obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
         elif isinstance(obj, TunnelExitSocket):
             obj.bytes_up += num_bytes
             self.stats['bytes_exit'] += num_bytes
             _barter_statistics.dict_inc_bartercast(BartercastStatisticTypes.TUNNELS_EXIT_BYTES_SENT, "%s:%s" %
                                                    (obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
             if self.multichain_scheduler:
-                self.multichain_scheduler.update_amount_send((obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
+                self.multichain_scheduler.update_amount_sent((obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
 
     def increase_bytes_received(self, obj, num_bytes):
         if isinstance(obj, Circuit):
