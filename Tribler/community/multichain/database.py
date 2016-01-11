@@ -29,8 +29,9 @@ CREATE TABLE IF NOT EXISTS multi_chain(
  mid_requester		        TEXT NOT NULL,
  signature_requester		TEXT NOT NULL,
  mid_responder		        TEXT NOT NULL,
- signature_responder		TEXT NOT NULL
-);
+ signature_responder		TEXT NOT NULL,
+ insert_time                TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+ );
 
 CREATE TABLE option(key TEXT PRIMARY KEY, value BLOB);
 INSERT INTO option(key, value) VALUES('database_version', '""" + str(LATEST_DB_VERSION) + u"""');
@@ -137,7 +138,7 @@ class MultiChainDB(Database):
         db_query = u"SELECT up, down, " \
                    u"total_up_requester, total_down_requester, sequence_number_requester,  previous_hash_requester, " \
                    u"total_up_responder, total_down_responder, sequence_number_responder,  previous_hash_responder," \
-                   u"mid_requester, signature_requester, mid_responder, signature_responder " \
+                   u"mid_requester, signature_requester, mid_responder, signature_responder, insert_time " \
                    u"FROM (" \
                    u"SELECT *, sequence_number_requester AS sequence_number, mid_requester AS mid FROM `multi_chain` " \
                    u"UNION " \
@@ -281,7 +282,7 @@ class DatabaseBlock:
                     payload.total_up_responder, payload.total_down_responder,
                     payload.sequence_number_responder, payload.previous_hash_responder,
                     requester[1].mid, requester[0], responder[1].mid, responder[0],
-                    requester[1].public_key, responder[1].public_key))
+                    None, requester[1].public_key, responder[1].public_key))
 
     @classmethod
     def from_block_response_message(cls, message, requester, responder):
@@ -292,7 +293,7 @@ class DatabaseBlock:
                     payload.total_up_responder, payload.total_down_responder,
                     payload.sequence_number_responder, payload.previous_hash_responder,
                     requester.mid, payload.signature_requester, responder.mid, payload.signature_responder,
-                    requester.public_key, responder.public_key))
+                    None, requester.public_key, responder.public_key))
 
     def to_payload(self):
         """
