@@ -103,7 +103,7 @@ class MultiChainDB(Database):
         db_query = u"SELECT up, down, " \
                    u"total_up_requester, total_down_requester, sequence_number_requester,  previous_hash_requester, " \
                    u"total_up_responder, total_down_responder, sequence_number_responder,  previous_hash_responder," \
-                   u"mid_requester, signature_requester, mid_responder, signature_responder " \
+                   u"mid_requester, signature_requester, mid_responder, signature_responder, insert_time " \
                    u"FROM `multi_chain` WHERE block_hash = ? LIMIT 1"
         db_result = self.execute(db_query, (buffer(block_id),)).fetchone()
         # Create a DB Block or return None
@@ -118,7 +118,7 @@ class MultiChainDB(Database):
         db_query = u"SELECT up, down, " \
                    u"total_up_requester, total_down_requester, sequence_number_requester,  previous_hash_requester, " \
                    u"total_up_responder, total_down_responder, sequence_number_responder,  previous_hash_responder," \
-                   u"mid_requester, signature_requester, mid_responder, signature_responder " \
+                   u"mid_requester, signature_requester, mid_responder, signature_responder, insert_time " \
                    u"FROM (" \
                    u"SELECT *, sequence_number_requester AS sequence_number, mid_requester AS mid FROM `multi_chain` " \
                    u"UNION " \
@@ -265,9 +265,11 @@ class DatabaseBlock:
         """ Set the signature part of the responder """
         self.mid_responder = str(data[12])
         self.signature_responder = str(data[13])
+        """ Set the timestamp of block insertion into local database """
+        self.insert_time = data[14]
         """ Set the public keys """
-        self.public_key_requester = str(data[14])
-        self.public_key_responder = str(data[15])
+        self.public_key_requester = str(data[15])
+        self.public_key_responder = str(data[16])
         """ Set up the block hash """
         self.id = sha1(encode_block(self)).digest()
 
