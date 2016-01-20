@@ -26,9 +26,11 @@ SIGNATURE = u"signature"
 BLOCK_REQUEST = u"block_request"
 BLOCK_RESPONSE = u"block_response"
 
-""" ID of the first block of the chain. """
+# ID of the first block of the chain.
 GENESIS_ID = '0' * 20
 
+# Divide by this to convert from bytes to MegaBytes.
+MEGA_DIVIDER = 1000000
 
 class MultiChainScheduler:
     """
@@ -38,12 +40,14 @@ class MultiChainScheduler:
     This is a very simple version that should be expanded in the future.
     """
 
-    """ The amount of bytes that the Scheduler will be altruistic about and allows to be outstanding. """
-    # 5MB
-    threshold = 1000000
-    """" Divide by this to convert from bytes to MegaBytes. """
-    mega_divider = 1000000
-
+    # The amount of bytes that the Scheduler will be altruistic about and allows to be outstanding.
+    threshold = 10 * MEGA_DIVIDER
+    
+    # Counter decay settings
+    decay_interval = 60.0 
+    decay_factor = 0.95
+    decay_threshold = 0.1 * MEGA_DIVIDER
+     
     def __init__(self, community):
         """
         Create the MultiChainScheduler
@@ -54,6 +58,7 @@ class MultiChainScheduler:
         self._outstanding_amount_received = {}
         """ The MultiChainCommunity that will be used to send requests. """
         self._community = community
+        self._community.register_task("decay counters", LoopingCall(self.decay_counters)).start(self.decay_interval, now=False)
 
     def update_amount_send(self, peer, amount_send):
         """
@@ -102,6 +107,17 @@ class MultiChainScheduler:
             self._community.logger.warn(
                 "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
 
+    def decay_counters(self):
+        for key in self._outstanding_amount_send:
+            self._outstanding_amount_send[key] *= self.decay_factor
+            if (self._outstanding_amount_send[key] < self.decay_threshold):
+                self._community.logger.warn("Scheduler send counter for peer %s has decayed below the threshold, deleting" % base64.encodestring(key))
+                del self._outstanding_amount_send[key]
+        for key in self._outstanding_amount_received:
+            self._outstanding_amount_received[key] *= self.decay_factor
+            if (self._outstanding_amount_received[key] < self.decay_threshold):
+                self._community.logger.warn("Scheduler received counter for peer %s has decayed below the threshold, deleting" % base64.encodestring(key))
+                del self._outstanding_amount_received[key]
 
 class MultiChainCommunity(Community):
     """
