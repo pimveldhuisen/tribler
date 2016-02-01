@@ -44,7 +44,7 @@ class MultiChainScheduler:
     threshold = 10 * MEGA_DIVIDER
     
     # Counter decay settings
-    decay_interval = 60.0 
+    decay_interval = 120.0
     decay_factor = 0.95
     decay_threshold = 0.1 * MEGA_DIVIDER
      
@@ -108,16 +108,17 @@ class MultiChainScheduler:
                 "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
 
     def decay_counters(self):
-        for key in self._outstanding_amount_send:
-            self._outstanding_amount_send[key] *= self.decay_factor
-            if (self._outstanding_amount_send[key] < self.decay_threshold):
-                self._community.logger.warn("Scheduler send counter for peer %s has decayed below the threshold, deleting" % base64.encodestring(key))
-                del self._outstanding_amount_send[key]
-        for key in self._outstanding_amount_received:
-            self._outstanding_amount_received[key] *= self.decay_factor
-            if (self._outstanding_amount_received[key] < self.decay_threshold):
-                self._community.logger.warn("Scheduler received counter for peer %s has decayed below the threshold, deleting" % base64.encodestring(key))
-                del self._outstanding_amount_received[key]
+        def decay_dict(decay):
+            delete_key = []
+            for key in decay:
+                decay[key] *= self.decay_factor
+                if (decay[key] < self.decay_threshold):
+                    self._community.logger.warn("Scheduler counter for peer %s has decayed below the threshold, deleting" % (key,))
+                    delete_key.append(key)
+            for key in delete_key:
+                del decay[key]
+        decay_dict(self._outstanding_amount_send)
+        decay_dict(self._outstanding_amount_received)
 
 class MultiChainCommunity(Community):
     """
