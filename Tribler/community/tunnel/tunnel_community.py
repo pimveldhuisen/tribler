@@ -603,6 +603,7 @@ class TunnelCommunity(Community):
         for cid in to_remove:
             if cid in self.relay_from_to:
                 if self.multichain_scheduler:
+                    # Request signature from the node we relayed to
                     self.complete_multichain_transaction(self.relay_from_to[cid])
                 self.tunnel_logger.warning("Removing relay %d %s", cid, additional_info)
                 # Remove the relay
@@ -616,6 +617,9 @@ class TunnelCommunity(Community):
     def remove_exit_socket(self, circuit_id, additional_info='', destroy=False):
         if circuit_id in self.exit_sockets:
             if destroy:
+                if self.multichain_scheduler:
+                    # Request signature from the node we were an exit socket for
+                    self.complete_multichain_transaction(self.exit_sockets[circuit_id])
                 self.destroy_exit_socket(circuit_id)
 
             # Close socket
@@ -631,6 +635,9 @@ class TunnelCommunity(Community):
 
     def destroy_circuit(self, circuit_id, reason=0):
         if circuit_id in self.circuits:
+            if self.multichain_scheduler:
+                # Request signature from the first hop
+                self.complete_multichain_transaction(self.circuits[circuit_id])
             sock_addr = self.circuits[circuit_id].first_hop
             self.send_destroy(Candidate(sock_addr, False), circuit_id, reason)
             self.tunnel_logger.info("destroy_circuit %s %s", circuit_id, sock_addr)
