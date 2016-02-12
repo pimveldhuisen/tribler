@@ -632,6 +632,9 @@ class TunnelCommunity(Community):
             sock_addr = self.circuits[circuit_id].first_hop
             self.send_destroy(Candidate(sock_addr, False), circuit_id, reason)
             self.tunnel_logger.info("destroy_circuit %s %s", circuit_id, sock_addr)
+            if self.multichain_scheduler:
+                circuit = self.circuits.get(circuit_id, None)
+                self.complete_multichain_transaction(circuit)
         else:
             self.tunnel_logger.error("could not destroy circuit %d %s", circuit_id, reason)
 
@@ -1329,3 +1332,12 @@ class TunnelCommunity(Community):
                                                    (obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
             if self.multichain_scheduler:
                 self.multichain_scheduler.update_amount_received((obj.sock_addr[0], obj.sock_addr[1]), num_bytes)
+
+    def complete_multichain_transaction(self, obj):
+        if isinstance(obj, Circuit):
+            self.multichain_scheduler.schedule_block((obj.first_hop[0], obj.first_hop[1]))
+        elif isinstance(obj, RelayRoute):
+            self.multichain_scheduler.schedule_block((obj.sock_addr[0], obj.sock_addr[1]))
+        elif isinstance(obj, TunnelExitSocket):
+            self.multichain_scheduler.schedule_block((obj.sock_addr[0], obj.sock_addr[1]))
+
