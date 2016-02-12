@@ -603,8 +603,7 @@ class TunnelCommunity(Community):
         for cid in to_remove:
             if cid in self.relay_from_to:
                 if self.multichain_scheduler:
-                    circuit = self.circuits.get(cid, None)
-                    self.complete_multichain_transaction(circuit)
+                    self.complete_multichain_transaction(self.relay_from_to[cid])
                 self.tunnel_logger.warning("Removing relay %d %s", cid, additional_info)
                 # Remove the relay
                 del self.relay_from_to[cid]
