@@ -561,6 +561,9 @@ class TunnelCommunity(Community):
 
         if circuit_id in self.circuits:
             self.tunnel_logger.info("removing circuit %d " + additional_info, circuit_id)
+            if self.multichain_scheduler:
+                circuit = self.circuits.get(circuit_id, None)
+                self.complete_multichain_transaction(circuit)
 
             if destroy:
                 self.destroy_circuit(circuit_id)
@@ -632,9 +635,6 @@ class TunnelCommunity(Community):
             sock_addr = self.circuits[circuit_id].first_hop
             self.send_destroy(Candidate(sock_addr, False), circuit_id, reason)
             self.tunnel_logger.info("destroy_circuit %s %s", circuit_id, sock_addr)
-            if self.multichain_scheduler:
-                circuit = self.circuits.get(circuit_id, None)
-                self.complete_multichain_transaction(circuit)
         else:
             self.tunnel_logger.error("could not destroy circuit %d %s", circuit_id, reason)
 
