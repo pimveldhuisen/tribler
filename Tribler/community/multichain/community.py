@@ -90,14 +90,15 @@ class MultiChainScheduler:
             """ Convert to MB """
             total_amount_sent_mb = total_amount_send / self.mega_divider
             total_amount_received_mb = total_amount_received / self.mega_divider
-            """ Try to sent the request """
-            request_sent = self._community. \
-                publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
-            if request_sent:
-                """ Reset the outstanding amounts to the remainder
-                and send a signature request for the outstanding amount"""
-                self._outstanding_amount_send[peer] = total_amount_send % self.mega_divider
-                self._outstanding_amount_received[peer] = total_amount_received % self.mega_divider
+            if total_amount_sent_mb > 0 or total_amount_received_mb > 0:
+                """ Try to sent the request """
+                request_sent = self._community. \
+                    publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
+                if request_sent:
+                    """ Reset the outstanding amounts to the remainder
+                    and send a signature request for the outstanding amount"""
+                    self._outstanding_amount_send[peer] = total_amount_send % self.mega_divider
+                    self._outstanding_amount_received[peer] = total_amount_received % self.mega_divider
         else:
             self._community.logger.warn(
                 "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
