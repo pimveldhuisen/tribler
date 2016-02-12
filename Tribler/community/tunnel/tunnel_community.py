@@ -601,7 +601,11 @@ class TunnelCommunity(Community):
 
         # Send destroy
         if destroy:
+            if self.multichain_scheduler:
+                circuit = self.circuits.get(circuit_id, None)
+                self.complete_multichain_transaction(circuit)
             self.destroy_relay(to_remove, got_destroy_from=got_destroy_from)
+
 
         for cid in to_remove:
             if cid in self.relay_from_to:
@@ -617,6 +621,9 @@ class TunnelCommunity(Community):
     def remove_exit_socket(self, circuit_id, additional_info='', destroy=False):
         if circuit_id in self.exit_sockets:
             if destroy:
+                if self.multichain_scheduler:
+                    circuit = self.circuits.get(circuit_id, None)
+                    self.complete_multichain_transaction(circuit)
                 self.destroy_exit_socket(circuit_id)
 
             # Close socket
