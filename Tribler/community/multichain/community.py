@@ -270,6 +270,11 @@ class MultiChainCommunity(Community):
                                 distribution=(message.distribution.global_time,),
                                 payload=payload)
             self.persist_signature_response(message)
+
+            peer = message.candidate
+            self._outstanding_amount_send[peer] -= total_up_responder
+            self._outstanding_amount_received[peer] -= total_down_responder
+
             # Operation on chain done, release the chain_exclusion_flag for other operations.
             self.chain_exclusion_flag = False
             self.logger.debug("Chain Exclusion: released processing request.")
