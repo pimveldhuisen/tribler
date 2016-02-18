@@ -10,6 +10,8 @@ import logging
 import base64
 from twisted.internet.task import LoopingCall
 
+from Tribler.Core.Session import Session
+
 from Tribler.dispersy.authentication import DoubleMemberAuthentication, MemberAuthentication
 from Tribler.dispersy.resolution import PublicResolution
 from Tribler.dispersy.distribution import DirectDistribution
@@ -17,6 +19,9 @@ from Tribler.dispersy.destination import CandidateDestination
 from Tribler.dispersy.community import Community
 from Tribler.dispersy.message import Message, BatchConfiguration
 from Tribler.dispersy.conversion import DefaultConversion
+
+from Tribler.community.tunnel.routing import Circuit, RelayRoute
+from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 
 from Tribler.community.multichain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload, CrawlResumePayload
 from Tribler.community.multichain.database import MultiChainDB, DatabaseBlock
@@ -33,6 +38,7 @@ GENESIS_ID = '0' * 20
 # Divide by this to convert from bytes to MegaBytes.
 MEGA_DIVIDER = 1024 * 1024
 
+
 class MultiChainCommunity(Community):
     """
     Community for reputation based on MultiChain tamper proof interaction history.
@@ -44,6 +50,9 @@ class MultiChainCommunity(Community):
     def __init__(self, *args, **kwargs):
         super(MultiChainCommunity, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
+        Session.get_instance().add_observer(self.on_tunnel_remove, NTFY_TUNNEL, [NTFY_REMOVE])
 
         self._ec = self.my_member.private_key
         self._mid = self.my_member.mid
@@ -129,24 +138,25 @@ class MultiChainCommunity(Community):
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
 
-
-    def schedule_block(self, peer):
+    def schedule_block(self, peer, bytes_up, bytes_down):
             """
             Schedule a block for the current outstanding amounts
+            :param peer: The peer with whom you have interacted, identified by the (ip, port) tuple
+            :param bytes_up: The bytes you have uploaded to the peer in this interaction
+            :param bytes_down: The bytes you have downloaded from the peer in this interaction
             """
             candidate = self.get_candidate(peer)
             if candidate and candidate.get_member():
-                total_amount_sent = self._outstanding_amount_sent.get(peer, 0)
-                total_amount_received = self._outstanding_amount_received.get(peer, 0)
+
                 """ Convert to MB """
-                total_amount_sent_mb = total_amount_sent / self.mega_divider
-                total_amount_received_mb = total_amount_received / self.mega_divider
+                total_amount_sent_mb = bytes_up / MEGA_DIVIDER
+                total_amount_received_mb = bytes_down / MEGA_DIVIDER
                 """ Try to send the request """
-                request_is_sent = self. \
-                    publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
+                self.publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
             else:
                 self.logger.warn(
                     "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
+
     def publish_signature_request_message(self, candidate, up, down):
         """
         Creates and sends out a signed signature_request message if the chain is free for operations.
@@ -336,7 +346,6 @@ class MultiChainCommunity(Community):
         for message in messages:
             self.send_crawl_request(message.candidate)
 
-
     def get_key(self):
         return self._ec
 
@@ -366,6 +375,38 @@ class MultiChainCommunity(Community):
         # Close the persistence layer
         self.persistence.close()
 
+    def on_tunnel_remove(self, subject, changeType, tunnel, stats):
+        """
+        Handler for the remove event of a tunnel. This function will attempt to create a block for the amounts that
+        were transferred using the tunnel.
+        :param subject:
+        :param changeType:
+        :param tunnel: The tunnel that was removed (closed)
+        :param stats: The statistics regarding this tunnel
+        :return:
+        """
+        if isinstance(tunnel, Circuit):
+            bytes_up = stats['bytes_up']
+            bytes_down = stats['bytes_down']
+            peer = (tunnel.first_hop[0], tunnel.first_hop[1])
+        elif isinstance(tunnel, RelayRoute):
+            bytes_up = stats['bytes_relay_up']
+            bytes_down = stats['bytes_relay_down']
+            peer = (tunnel.sock_addr[0], tunnel.sock_addr[1])
+        elif isinstance(tunnel, TunnelExitSocket):
+            bytes_up = stats['bytes_exit']
+            bytes_down = stats['bytes_enter']
+            peer = (tunnel.sock_addr[0], tunnel.sock_addr[1])
+        else:
+            self.logger.error("Got a tunnel remove event for an object that is not a Circuit, RelayRoute or TunnelExitSocket")
+            raise TypeError("Got a tunnel remove event for an object that is not a Circuit, RelayRoute or TunnelExitSocket")
+
+        if type(bytes_up) is int and type(bytes_down) is int:
+            if bytes_up > bytes_down:
+                self.schedule_block(peer, bytes_up, bytes_down)
+            #else:
+                #TODO Note that you still expect a signature request for these bytes:
+                #pending[peer] = (up, down)
 
 class MultiChainCommunityCrawler(MultiChainCommunity):
     """
