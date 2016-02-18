@@ -31,95 +31,7 @@ CRAWL_RESUME = u"crawl_resume"
 GENESIS_ID = '0' * 20
 
 # Divide by this to convert from bytes to MegaBytes.
-MEGA_DIVIDER = 1000000
-
-class MultiChainScheduler:
-    """
-    Schedules when blocks are requested by the MultiChainCommunity.
-    The Scheduler keeps track of the outstanding amount per candidate.
-    This outstanding amount is not persisted and is lost when Tribler is restarted.
-    This is a very simple version that should be expanded in the future.
-    """
-
-    # The amount of bytes that the Scheduler will be altruistic about and allows to be outstanding.
-    threshold = 10 * MEGA_DIVIDER
-
-    # Counter decay settings
-    decay_interval = 120.0
-    decay_factor = 0.95
-    decay_threshold = 0.1 * MEGA_DIVIDER
-
-    def __init__(self, community):
-        """
-        Create the MultiChainScheduler
-        :param community: The MultiChainCommunity that will be used to send requests.
-        """
-        """ Key: candidate's mid Value: amount of data not yet created into a block """
-        self._outstanding_amount_sent = {}
-        self._outstanding_amount_received = {}
-        """ The MultiChainCommunity that will be used to send requests. """
-        self._community = community
-        self._community.register_task("decay counters", LoopingCall(self.decay_counters)).start(self.decay_interval, now=False)
-
-    def update_amount_sent(self, peer, amount_sent):
-        """
-        Update the amount of data sent. If the amount is above the threshold, then a block will be created.
-        :param peer: (address, port) translated into a Candidate.
-        :param amount_sent: amount of bytes sent to the peer.
-        :return: None
-        """
-        self._community.logger.debug("Updating amount sent for: %s amount:%s" % (peer[0], str(amount_sent)))
-        total_amount_sent = self._outstanding_amount_sent.get(peer, 0) + amount_sent
-        self._outstanding_amount_sent[peer] = total_amount_sent
-        if total_amount_sent >= self.threshold:
-            self.schedule_block(peer)
-
-    def update_amount_received(self, peer, amount_received):
-        """
-        Update the amount of data received. 
-        :param peer: (address, port) translated into a Candidate.
-        :param amount_received: amount of bytes received from a peer
-        :return: None
-        """
-        self._community.logger.debug("Updating amount received for: %s" % peer[0])
-        self._outstanding_amount_received[peer] = self._outstanding_amount_received.get(peer, 0) + amount_received
-        # TODO this amount received has to be checked in the future when signature_requests come in.
-
-    def schedule_block(self, peer):
-        """
-        Schedule a block for the current outstanding amounts
-        """
-        candidate = self._community.get_candidate(peer)
-        if candidate and candidate.get_member():
-            total_amount_sent = self._outstanding_amount_sent.get(peer, 0)
-            total_amount_received = self._outstanding_amount_received.get(peer, 0)
-            """ Convert to MB """
-            total_amount_sent_mb = total_amount_sent / self.mega_divider
-            total_amount_received_mb = total_amount_received / self.mega_divider
-            """ Try to send the request """
-            request_is_sent = self._community. \
-                publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
-            if request_is_sent:
-                """ Reset the outstanding amounts to the remainder
-                and send a signature request for the outstanding amount"""
-                self._outstanding_amount_sent[peer] = total_amount_sent % self.mega_divider
-                self._outstanding_amount_received[peer] = total_amount_received % self.mega_divider
-        else:
-            self._community.logger.warn(
-                "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
-
-    def decay_counters(self):
-        def decay_dict(decay):
-            delete_key = []
-            for key in decay:
-                decay[key] *= self.decay_factor
-                if (decay[key] < self.decay_threshold):
-                    self._community.logger.warn("Scheduler counter for peer %s has decayed below the threshold, deleting" % (key,))
-                    delete_key.append(key)
-            for key in delete_key:
-                del decay[key]
-        decay_dict(self._outstanding_amount_send)
-        decay_dict(self._outstanding_amount_received)
+MEGA_DIVIDER = 1024 * 1024
 
 class MultiChainCommunity(Community):
     """
@@ -217,6 +129,24 @@ class MultiChainCommunity(Community):
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
 
+
+    def schedule_block(self, peer):
+            """
+            Schedule a block for the current outstanding amounts
+            """
+            candidate = self.get_candidate(peer)
+            if candidate and candidate.get_member():
+                total_amount_sent = self._outstanding_amount_sent.get(peer, 0)
+                total_amount_received = self._outstanding_amount_received.get(peer, 0)
+                """ Convert to MB """
+                total_amount_sent_mb = total_amount_sent / self.mega_divider
+                total_amount_received_mb = total_amount_received / self.mega_divider
+                """ Try to send the request """
+                request_is_sent = self. \
+                    publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
+            else:
+                self.logger.warn(
+                    "No valid candidate found for: %s:%s to request block from." % (peer[0], peer[1]))
     def publish_signature_request_message(self, candidate, up, down):
         """
         Creates and sends out a signed signature_request message if the chain is free for operations.
