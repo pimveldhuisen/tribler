@@ -18,9 +18,13 @@ Formatting of the signature packet
 """
 # TotalUp TotalDown Sequence_number, previous_hash
 append_format = 'Q Q i ' + str(HASH_LENGTH) + 's'
+# Up, Down
+common_data_format = 'I I'
 # [Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester,
 #   TotalUpResponder, TotalDownResponder, sequence_number_responder, previous_hash_responder]
-signature_format = ' '.join(['!I I', append_format, append_format])
+signature_format = ' '.join(["!", common_data_format, append_format, append_format])
+#PK_requester, PK_responder, Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester, signature_requester
+requester_half_format = str(PK_LENGTH) + 's ' + str(PK_LENGTH) + 's ' + common_data_format + ' ' + append_format + ' ' + str(SIG_LENGTH) + 's '
 signature_size = calcsize(signature_format)
 append_size = calcsize(append_format)
 
@@ -179,3 +183,11 @@ def encode_block(payload):
                                          payload.sequence_number_responder, payload.previous_hash_responder,
                                          payload.public_key_requester, payload.signature_requester,
                                          payload.public_key_responder, payload.signature_responder,))
+
+
+def encode_block_requester_half(payload):
+    return pack(requester_half_format, *(payload.public_key_requester, payload.public_key_responder,
+                                         payload.up, payload.down,
+                                         payload.total_up_requester, payload.total_down_requester,
+                                         payload.sequence_number_requester, payload.previous_hash_requester,
+                                         payload.signature_requester))
