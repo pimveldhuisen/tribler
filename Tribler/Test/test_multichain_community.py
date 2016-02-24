@@ -5,7 +5,11 @@ import time
 import uuid
 import logging
 
+from Tribler.Core.Session import Session
+
 from Tribler.community.multichain.community import  MultiChainCommunity, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME
+
+from Tribler.community.tunnel.routing import Circuit
 
 from Tribler.Test.test_as_server import BaseTestCase
 
@@ -18,6 +22,24 @@ class TestMultiChainCommunity(DispersyTestFunc):
     Class that tests the MultiChainCommunity on an integration level.
     """
     """ This test class only runs if there is another testcase in this file."""
+
+    def test_notify_tunnel_remove(self):
+        """
+        Test the community to respond to a notify signal
+        """
+       # session = Session()
+      #  community = MultiChainCommunity()
+
+        node, other = self.create_nodes(2)
+
+        tunnel = Circuit(long(42), 1, ("123.123.123.123", 45))
+        stats = {}
+        stats['bytes_up'] = 420
+        stats['bytes_down'] = 42
+        from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
+        Session.get_instance().notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, tunnel, stats)
+
+        #TODO validate recieving
 
     def test_publish_signature_request_message(self):
         """
