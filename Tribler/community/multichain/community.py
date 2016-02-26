@@ -27,15 +27,12 @@ from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 from Tribler.community.multichain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,\
     CrawlResumePayload
 from Tribler.community.multichain.database import MultiChainDB, DatabaseBlock
-from Tribler.community.multichain.conversion import MultiChainConversion, split_function, HASH_LENGTH
+from Tribler.community.multichain.conversion import MultiChainConversion, split_function, GENESIS_ID
 
 SIGNATURE = u"signature"
 CRAWL_REQUEST = u"crawl_request"
 CRAWL_RESPONSE = u"crawl_response"
 CRAWL_RESUME = u"crawl_resume"
-
-# ID of the first block of the chain.
-GENESIS_ID = '0' * HASH_LENGTH
 
 # Divide by this to convert from bytes to MegaBytes.
 MEGA_DIVIDER = 1024 * 1024

@@ -8,7 +8,7 @@ import logging
 from Tribler.Core.Session import Session
 
 from Tribler.community.multichain.community import  MultiChainCommunity, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME
-from Tribler.community.multichain.payload import EMPTY_HASH
+from Tribler.community.multichain.conversion import EMPTY_HASH
 
 from Tribler.community.tunnel.routing import Circuit
 

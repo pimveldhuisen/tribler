@@ -12,6 +12,9 @@ Hash length used in the MultiChain Community
 HASH_LENGTH = 32
 SIG_LENGTH = 64
 PK_LENGTH = 74
+
+EMPTY_HASH = '1'*HASH_LENGTH    # Used in a request when the response data is not yet available
+GENESIS_ID = '0'*HASH_LENGTH    # ID of the first block of the chain.
 """
 Formatting of the signature packet
 """

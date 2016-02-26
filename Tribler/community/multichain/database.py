@@ -5,8 +5,7 @@ from os import path
 from hashlib import sha256
 
 from Tribler.dispersy.database import Database
-from Tribler.community.multichain.conversion import encode_block, encode_block_requester_half
-from Tribler.community.multichain.payload import EMPTY_HASH
+from Tribler.community.multichain.conversion import encode_block, encode_block_requester_half, EMPTY_HASH
 
 DATABASE_DIRECTORY = path.join(u"sqlite")
 """ Path to the database location + dispersy._workingdirectory"""
