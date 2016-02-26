@@ -24,9 +24,10 @@ from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.community.tunnel.routing import Circuit, RelayRoute
 from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 
-from Tribler.community.multichain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload, CrawlResumePayload
+from Tribler.community.multichain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,\
+    CrawlResumePayload
 from Tribler.community.multichain.database import MultiChainDB, DatabaseBlock
-from Tribler.community.multichain.conversion import MultiChainConversion, split_function
+from Tribler.community.multichain.conversion import MultiChainConversion, split_function, HASH_LENGTH
 
 SIGNATURE = u"signature"
 CRAWL_REQUEST = u"crawl_request"
@@ -34,7 +35,7 @@ CRAWL_RESPONSE = u"crawl_response"
 CRAWL_RESUME = u"crawl_resume"
 
 # ID of the first block of the chain.
-GENESIS_ID = '0' * 20
+GENESIS_ID = '0' * HASH_LENGTH
 
 # Divide by this to convert from bytes to MegaBytes.
 MEGA_DIVIDER = 1024 * 1024
@@ -55,15 +56,10 @@ class MultiChainCommunity(Community):
         from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
         Session.get_instance().add_observer(self.on_tunnel_remove, NTFY_TUNNEL, [NTFY_REMOVE])
 
-        self._ec = self.my_member.private_key
-        self._mid = self.my_member.mid
+        self._private_key = self.my_member.private_key
+        self._public_key = self.my_member.public_key
         self.persistence = MultiChainDB(self.dispersy, self.dispersy.working_directory)
-        """
-        Exclusion flag for operations on the chain. Only one operation can be pending on the chain at any time.
-        Without exclusion the chain will be corrupted and branches will be created.
-        This exclusion flag ensures that only one operation is pending.
-        """
-        self.chain_exclusion_flag = False
+
         # No response is expected yet.
         self.expected_response = None
 
@@ -147,7 +143,6 @@ class MultiChainCommunity(Community):
             :param bytes_down: The bytes you have downloaded from the peer in this interaction
             """
             self.logger.error("MULTICHAIN: Schedule Block called. Candidate: " + str(candidate) + " UP: " + str(bytes_up) + " DOWN: " + str(bytes_down) )
-            #candidate = self.get_candidate(peer)
             self.add_discovered_candidate(candidate)
             if candidate and candidate.get_member():
                 self.logger.error("MULTICHAIN: Candidate found" )
@@ -163,6 +158,7 @@ class MultiChainCommunity(Community):
                     "No valid candidate found for: %s:%s to request block from." % (candidate[0], candidate[1]))
 
     def publish_signature_request_message(self, candidate, up, down):
+        #TODO fix description
         """
         Creates and sends out a signed signature_request message if the chain is free for operations.
         If it is the request is sent and True is returned, else False.
@@ -171,29 +167,12 @@ class MultiChainCommunity(Community):
         :param (int) down: The amount of bytes that have been received from the candidate that need to signed.
         return (bool) if request is sent.
         """
+        message = self.create_signature_request_message(candidate, up, down)
+        self.create_signature_request(candidate, message, self.allow_signature_response,
+                                      timeout=self.signature_request_timeout)
+        self.persist_signature_request(message)
+        return True
 
-        """
-        Acquire exclusive flag to perform operations on the chain.
-        The chain_exclusion_flag is lifted after the timeout or a valid signature response is received.
-        """
-        self.logger.debug("Chain Exclusion: signature request: %s" % self.chain_exclusion_flag)
-        if not self.chain_exclusion_flag:
-           # self.chain_exclusion_flag = True
-            self.logger.debug("Chain Exclusion: acquired, sending signature request.")
-            self.logger.info("Sending signature request.")
-            self.logger.error("MULTICHAIN: Sending dispersy message" )
-
-
-            message = self.create_signature_request_message(candidate, up, down)
-            self.create_signature_request(candidate, message, self.allow_signature_response,
-                                          timeout=self.signature_request_timeout)
-            self.chain_exclusion_flag = False
-            return True
-        else:
-            self.logger.error("MULTICHAIN: chain exclusion problem" )
-
-            self.logger.debug("Chain Exclusion: not acquired, dropping signature request.")
-            return False
 
     def create_signature_request_message(self, candidate, up, down):
         """
@@ -224,39 +203,28 @@ class MultiChainCommunity(Community):
         self.logger.error("MULTICHAIN: Allow Signature?")
 
         self.logger.info("Received signature request.")
-        self.logger.debug("Chain Exclusion: process request: %s" % self.chain_exclusion_flag)
-        # Check if the exclusion flag can be acquired without blocking to perform operations on the chain.
-        if not self.chain_exclusion_flag:
-         #   self.chain_exclusion_flag = True
-            self.logger.debug("Chain Exclusion: acquired to process request.")
-            # TODO: This code always signs a request. Checks and rejects should be inserted here!
-            # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
-            payload = message.payload
+        # TODO: This code always signs a request. Checks and rejects should be inserted here!
+        # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
+        payload = message.payload
 
-            """ The up and down values are reversed for the responder. """
-            total_up_responder, total_down_responder = self._get_next_total(payload.down, payload.up)
-            sequence_number_responder = self._get_next_sequence_number()
-            previous_hash_responder = self._get_latest_hash()
+        """ The up and down values are reversed for the responder. """
+        total_up_responder, total_down_responder = self._get_next_total(payload.down, payload.up)
+        sequence_number_responder = self._get_next_sequence_number()
+        previous_hash_responder = self._get_latest_hash()
 
-            payload = (payload.up, payload.down, payload.total_up_requester, payload.total_down_requester,
-                       payload.sequence_number_requester, payload.previous_hash_requester,
-                       total_up_responder, total_down_responder,
-                       sequence_number_responder, previous_hash_responder)
+        payload = (payload.up, payload.down, payload.total_up_requester, payload.total_down_requester,
+                   payload.sequence_number_requester, payload.previous_hash_requester,
+                   total_up_responder, total_down_responder,
+                   sequence_number_responder, previous_hash_responder)
 
-            meta = self.get_meta_message(SIGNATURE)
+        meta = self.get_meta_message(SIGNATURE)
 
-            message = meta.impl(authentication=(message.authentication.members, message.authentication.signatures),
-                                distribution=(message.distribution.global_time,),
-                                payload=payload)
-            self.persist_signature_response(message)
-            # Operation on chain done, release the chain_exclusion_flag for other operations.
-            self.chain_exclusion_flag = False
-            self.logger.debug("Chain Exclusion: released processing request.")
-            self.logger.info("Sending signature response.")
-            return message
-        else:
-            self.logger.debug("Chain Exclusion: not acquired. Dropping request.")
-            return None
+        message = meta.impl(authentication=(message.authentication.members, message.authentication.signatures),
+                            distribution=(message.distribution.global_time,),
+                            payload=payload)
+        self.persist_signature_response(message)
+        self.logger.info("Sending signature response.")
+        return message
 
     def allow_signature_response(self, request, response, modified):
         """
@@ -267,15 +235,19 @@ class MultiChainCommunity(Community):
         if not response:
             self.logger.info("Timeout received for signature request.")
             # Unpack the message from the cache object and store a half-signed record.
-            self.persist_signature_response(request.request.payload.message)
-            self.chain_exclusion_flag = False
+        #    self.persist_signature_response(request.request.payload.message)
             return False
         else:
             # TODO: Check expecting response
             self.logger.info("Signature response received. Modified: %s" % modified)
-            return request.payload.sequence_number_requester == response.payload.sequence_number_requester and \
-                   request.payload.previous_hash_requester == response.payload.previous_hash_requester and \
-                   modified
+
+            if request.payload.sequence_number_requester == response.payload.sequence_number_requester and \
+               request.payload.previous_hash_requester == response.payload.previous_hash_requester and modified:
+                block = DatabaseBlock.from_signature_response_message(response)
+                self.persistence.update_block(block)
+                return True
+            else:
+                return False
 
     def received_signature_response(self, messages):
         """
@@ -286,7 +258,6 @@ class MultiChainCommunity(Community):
             self.persist_signature_response(message)
             # Release exclusion flag because the operation is done.
             self.logger.debug("Chain exclusion: released received signature response.")
-            self.chain_exclusion_flag = False
 
     def persist_signature_response(self, message):
         """
@@ -295,6 +266,16 @@ class MultiChainCommunity(Community):
         :param message:
         """
         block = DatabaseBlock.from_signature_response_message(message)
+        self.logger.info("Persisting sr: %s" % base64.encodestring(block.hash_requester).strip())
+        self.persistence.add_block(block)
+
+    def persist_signature_request(self, message):
+        """
+        Persist the signature request message as a block.
+        The block will be updated when a response is received.
+        :param message:
+        """
+        block = DatabaseBlock.from_signature_request_message(message)
         self.logger.info("Persisting sr: %s" % base64.encodestring(block.hash_requester).strip())
         self.persistence.add_block(block)
 
@@ -316,7 +297,7 @@ class MultiChainCommunity(Community):
             self.crawl_requested(message.candidate, message.payload.requested_sequence_number)
 
     def crawl_requested(self, candidate, sequence_number):
-        blocks = self.persistence.get_blocks_since(self._mid, sequence_number)
+        blocks = self.persistence.get_blocks_since(self.private_key, sequence_number)
         if len(blocks) > 0:
             self.logger.info("Crawler: Sending %d blocks" % len(blocks))
             messages = [self.get_meta_message(CRAWL_RESPONSE)
@@ -359,7 +340,7 @@ class MultiChainCommunity(Community):
             self.send_crawl_request(message.candidate)
 
     def get_key(self):
-        return self._ec
+        return self._private_key
 
     def _get_next_total(self, up, down):
         """
@@ -368,17 +349,17 @@ class MultiChainCommunity(Community):
         :param down: Down metric for the interaction.
         :return: (total_up (int), total_down (int)
         """
-        total_up, total_down = self.persistence.get_total(self._mid)
+        total_up, total_down = self.persistence.get_total(self._public_key)
         if total_up == total_down == -1:
             return up, down
         else:
             return total_up + up, total_down + down
 
     def _get_next_sequence_number(self):
-        return self.persistence.get_latest_sequence_number(self._mid) + 1
+        return self.persistence.get_latest_sequence_number(self._public_key) + 1
 
     def _get_latest_hash(self):
-        previous_hash = self.persistence.get_previous_hash(self._mid)
+        previous_hash = self.persistence.get_latest_hash(self._public_key)
         return previous_hash if previous_hash else GENESIS_ID
 
     def unload_community(self):

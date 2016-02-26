@@ -9,8 +9,7 @@ from Tribler.dispersy.message import DropPacket
 """
 Hash length used in the MultiChain Community
 """
-# Calculated with sha1("").digest_size
-HASH_LENGTH = 20
+HASH_LENGTH = 32
 SIG_LENGTH = 64
 PK_LENGTH = 74
 """
@@ -23,8 +22,10 @@ common_data_format = 'I I'
 # [Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester,
 #   TotalUpResponder, TotalDownResponder, sequence_number_responder, previous_hash_responder]
 signature_format = ' '.join(["!", common_data_format, append_format, append_format])
-#PK_requester, PK_responder, Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester, signature_requester
-requester_half_format = str(PK_LENGTH) + 's ' + str(PK_LENGTH) + 's ' + common_data_format + ' ' + append_format + ' ' + str(SIG_LENGTH) + 's '
+# PK_requester, PK_responder, Up, Down,
+# TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester, signature_requester
+requester_half_format = str(PK_LENGTH) + 's ' + str(PK_LENGTH) + 's ' + common_data_format + \
+                        ' ' + append_format + ' ' + str(SIG_LENGTH) + 's '
 signature_size = calcsize(signature_format)
 append_size = calcsize(append_format)
 
@@ -167,27 +168,27 @@ def split_function(payload):
     return payload[:-append_size], payload
 
 
-def encode_block(payload):
+def encode_block(payload, requester, responder):
     """
     This function encodes a block.
     :param payload: Payload containing the data as properties
     :return: encoding
     """
     """ Test code sometimes run a different curve with a different key length resulting in hard to catch bugs."""
-    assert len(payload.public_key_requester) == PK_LENGTH
-    assert len(payload.public_key_responder) == PK_LENGTH
+    assert len(requester[1].public_key) == PK_LENGTH
+    assert len(responder[1].public_key) == PK_LENGTH
     return pack(crawl_response_format, *(payload.up, payload.down,
                                          payload.total_up_requester, payload.total_down_requester,
                                          payload.sequence_number_requester, payload.previous_hash_requester,
                                          payload.total_up_responder, payload.total_down_responder,
                                          payload.sequence_number_responder, payload.previous_hash_responder,
-                                         payload.public_key_requester, payload.signature_requester,
-                                         payload.public_key_responder, payload.signature_responder,))
+                                         requester[1].public_key, requester[0],
+                                         responder[1].public_key, responder[0]))
 
 
-def encode_block_requester_half(payload):
-    return pack(requester_half_format, *(payload.public_key_requester, payload.public_key_responder,
+def encode_block_requester_half(payload, requester, responder):
+    return pack(requester_half_format, *(requester[1].public_key, responder[1].public_key,
                                          payload.up, payload.down,
                                          payload.total_up_requester, payload.total_down_requester,
                                          payload.sequence_number_requester, payload.previous_hash_requester,
-                                         payload.signature_requester))
+                                         requester[0]))

@@ -2,7 +2,7 @@ from Tribler.dispersy.payload import Payload
 
 """ ID to indicate the block was not (yet) filled in by the responder.
 This can occur during signature request or in the database if the request has failed."""
-EMPTY_HASH = '0'*19+'1'
+EMPTY_HASH = '0'*31+'1'
 
 
 class SignaturePayload(Payload):
