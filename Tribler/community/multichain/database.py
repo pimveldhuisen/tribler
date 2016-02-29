@@ -82,26 +82,27 @@ class MultiChainDB(Database):
             u"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             data)
 
-    def update_block(self, block):
+    def update_block_with_responder(self, block):
         """
         Update an existing block
         :param block: The data that will be saved.
         """
-        data = (buffer(block.public_key_requester), buffer(block.public_key_responder), block.up, block.down,
-                block.total_up_requester, block.total_down_requester,
-                block.sequence_number_requester, buffer(block.previous_hash_requester),
-                buffer(block.signature_requester), buffer(block.hash_requester),
+        data = (
+            #buffer(block.public_key_requester), buffer(block.public_key_responder), block.up, block.down,
+          #      block.total_up_requester, block.total_down_requester,
+            #    block.sequence_number_requester, buffer(block.previous_hash_requester),
+           #     buffer(block.signature_requester), buffer(block.hash_requester),
                 block.total_up_responder, block.total_down_responder,
                 block.sequence_number_responder, buffer(block.previous_hash_responder),
                 buffer(block.signature_responder), buffer(block.hash_responder), buffer(block.hash_requester))
 
         self.execute(
             u"UPDATE multi_chain "
-            u"SET public_key_requester = ?, public_key_responder = ?, up = ?, down = ?, "
-            u"total_up_requester = ?, total_down_requester = ?, "
-            u"sequence_number_requester = ?, previous_hash_requester = ?, "
-            u"signature_requester = ?, hash_requester = ?, "
-            u"total_up_responder = ?, total_down_responder = ?, "
+         #   u"SET public_key_requester = ?, public_key_responder = ?, up = ?, down = ?, "
+         #   u"SET total_up_requester = ?, total_down_requester = ?, "
+          #  u"sequence_number_requester = ?, previous_hash_requester = ?, "
+         #   u"signature_requester = ?, hash_requester = ?, "
+            u"SET total_up_responder = ?, total_down_responder = ?, "
             u"sequence_number_responder = ?, previous_hash_responder = ?, "
             u"signature_responder = ?, hash_responder = ? "
             u"WHERE hash_requester = ?",

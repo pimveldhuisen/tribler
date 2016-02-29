@@ -163,6 +163,7 @@ class MultiChainCommunity(Community):
         :param (int) down: The amount of Megabytes that have been received from the candidate that need to signed.
         return (bool) if request is sent.
         """
+        self.logger.error("MULTICHAIN: publish_signature_request_message " + str(candidate) + "=" + str(up) + "|" + str(down))
         message = self.create_signature_request_message(candidate, up, down)
         self.create_signature_request(candidate, message, self.allow_signature_response,
                                       timeout=self.signature_request_timeout)
@@ -199,7 +200,7 @@ class MultiChainCommunity(Community):
             b. Drop the message. (Future work: notify the sender of dropping)
             :param message The message containing the received signature request.
         """
-        self.logger.error("MULTICHAIN: Allow Signature?")
+        self.logger.error("MULTICHAIN: Allow Signature: " + str(message.payload.up) + "|" + str(message.payload.down))
 
         self.logger.info("Received signature request.")
         # TODO: This code always signs a request. Checks and rejects should be inserted here!
@@ -246,7 +247,7 @@ class MultiChainCommunity(Community):
             if request.payload.sequence_number_requester == response.payload.sequence_number_requester and \
                request.payload.previous_hash_requester == response.payload.previous_hash_requester and modified:
                 block = DatabaseBlock.from_signature_response_message(response)
-                self.persistence.update_block(block)
+                self.persistence.update_block_with_responder(block)
                 return True
             else:
                 return False
@@ -404,11 +405,12 @@ class MultiChainCommunity(Community):
         self.logger.error("MULTICHAIN: parsed tunnel info")
 
         if isinstance(bytes_up, int) and isinstance(bytes_down, int):
-           # if bytes_up > bytes_down:
-                self.schedule_block(candidate, bytes_up, bytes_down)
-            #else:
-                #TODO Note that you still expect a signature request for these bytes:
-                #pending[peer] = (up, down)
+            if bytes_up > MEGA_DIVIDER or bytes_down > MEGA_DIVIDER:
+               # if bytes_up > bytes_down:
+                    self.schedule_block(candidate, bytes_up, bytes_down)
+                #else:
+                    #TODO Note that you still expect a signature request for these bytes:
+                    #pending[peer] = (up, down)
 
 
 class MultiChainCommunityCrawler(MultiChainCommunity):

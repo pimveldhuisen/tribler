@@ -22,8 +22,9 @@ Formatting of the signature packet
 append_format = 'Q Q i ' + str(HASH_LENGTH) + 's'
 # Up, Down
 common_data_format = 'I I'
-# [Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester,
-#   TotalUpResponder, TotalDownResponder, sequence_number_responder, previous_hash_responder]
+# [Up, Down,
+#  TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester,
+#  TotalUpResponder, TotalDownResponder, sequence_number_responder, previous_hash_responder]
 signature_format = ' '.join(["!", common_data_format, append_format, append_format])
 # PK_requester, PK_responder, Up, Down,
 # TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester, signature_requester
