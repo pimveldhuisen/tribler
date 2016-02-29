@@ -1,7 +1,6 @@
 """ This file contains everything related to persistence for MultiChain.
 """
 from os import path
-# Hasher used to generate hashes in the MultiChain Community
 from hashlib import sha256
 
 from Tribler.dispersy.database import Database
@@ -73,11 +72,6 @@ class MultiChainDB(Database):
                 block.total_up_responder, block.total_down_responder,
                 block.sequence_number_responder, buffer(block.previous_hash_responder),
                 buffer(block.signature_responder), buffer(block.hash_responder))
-        print(block.up, block.down,
-                block.total_up_requester, block.total_down_requester,
-                block.sequence_number_requester, block.hash_requester,
-                block.total_up_responder, block.total_down_responder,
-                block.sequence_number_responder, repr(block.hash_responder))
 
         self.execute(
             u"INSERT INTO multi_chain (public_key_requester, public_key_responder, up, down, "
@@ -223,9 +217,6 @@ class MultiChainDB(Database):
         :return: DatabaseBlock if db_result else None
         """
         if db_result:
-#            requester = self._dispersy.get_member(mid=str(db_result[10]))
-        #    responder = self._dispersy.get_member(mid=str(db_result[12]))
-#            return DatabaseBlock(db_result + (requester.public_key, responder.public_key))
             return DatabaseBlock(db_result)
         else:
             return None
@@ -350,6 +341,7 @@ class DatabaseBlock:
                     payload.sequence_number_responder, payload.previous_hash_responder,
                     responder[0], sha256(encode_block(payload, requester, responder)).digest(),
                     None))
+
     @classmethod
     def from_signature_request_message(cls, message):
         payload = message.payload
