@@ -163,7 +163,6 @@ class MultiChainCommunity(Community):
         :param (int) down: The amount of Megabytes that have been received from the candidate that need to signed.
         return (bool) if request is sent.
         """
-        self.logger.error("MULTICHAIN: publish_signature_request_message " + str(candidate) + "=" + str(up) + "|" + str(down))
         message = self.create_signature_request_message(candidate, up, down)
         self.create_signature_request(candidate, message, self.allow_signature_response,
                                       timeout=self.signature_request_timeout)
@@ -200,9 +199,8 @@ class MultiChainCommunity(Community):
             b. Drop the message. (Future work: notify the sender of dropping)
             :param message The message containing the received signature request.
         """
-        self.logger.error("MULTICHAIN: Allow Signature: " + str(message.payload.up) + "|" + str(message.payload.down))
-
-        self.logger.info("Received signature request.")
+        self.logger.info("Received signature request for: [Up = " + str(message.payload.up) + "MB | Down = " +
+                         str(message.payload.down) + " MB]")
         # TODO: This code always signs a request. Checks and rejects should be inserted here!
         # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
         payload = message.payload
@@ -386,9 +384,6 @@ class MultiChainCommunity(Community):
         :param candidate: The dispersy candidate with whom this node has interacted in the tunnel
         :return:TGliTmFDTFBLOirMUruvuMNO6fVRukZ2mut3a05I38dkdkzkohaqwZlFT24t/1xCug/pVglwArD+YEG4dx47ohoByy5lWWtQwno=
         """
-
-        self.logger.error("MULTICHAIN: on_tunnel_remove_called" + str(type(tunnel)) + str(stats))
-
         if isinstance(tunnel, Circuit):
             bytes_up = stats['bytes_up']
             bytes_down = stats['bytes_down']
@@ -399,14 +394,15 @@ class MultiChainCommunity(Community):
             bytes_up = stats['bytes_exit']
             bytes_down = stats['bytes_enter']
         else:
-            self.logger.error("Got a tunnel remove event for an object that is not a Circuit, RelayRoute or TunnelExitSocket")
-            raise TypeError("Got a tunnel remove event for an object that is not a Circuit, RelayRoute or TunnelExitSocket")
-
-        self.logger.error("MULTICHAIN: parsed tunnel info")
+            self.logger.error("Got a tunnel remove event for an object that is not a Circuit, "
+                              "RelayRoute or TunnelExitSocket")
+            raise TypeError("Got a tunnel remove event for an object that is not a Circuit,"
+                            " RelayRoute or TunnelExitSocket")
 
         if isinstance(bytes_up, int) and isinstance(bytes_down, int):
             if bytes_up > MEGA_DIVIDER or bytes_down > MEGA_DIVIDER:
-               # if bytes_up > bytes_down:
+                # Tie breaker to prevent both parties from requesting
+                if self._public_key > candidate.get_member().public_key:
                     self.schedule_block(candidate, bytes_up, bytes_down)
                 #else:
                     #TODO Note that you still expect a signature request for these bytes:

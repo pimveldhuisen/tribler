@@ -88,20 +88,12 @@ class MultiChainDB(Database):
         :param block: The data that will be saved.
         """
         data = (
-            #buffer(block.public_key_requester), buffer(block.public_key_responder), block.up, block.down,
-          #      block.total_up_requester, block.total_down_requester,
-            #    block.sequence_number_requester, buffer(block.previous_hash_requester),
-           #     buffer(block.signature_requester), buffer(block.hash_requester),
                 block.total_up_responder, block.total_down_responder,
                 block.sequence_number_responder, buffer(block.previous_hash_responder),
                 buffer(block.signature_responder), buffer(block.hash_responder), buffer(block.hash_requester))
 
         self.execute(
             u"UPDATE multi_chain "
-         #   u"SET public_key_requester = ?, public_key_responder = ?, up = ?, down = ?, "
-         #   u"SET total_up_requester = ?, total_down_requester = ?, "
-          #  u"sequence_number_requester = ?, previous_hash_requester = ?, "
-         #   u"signature_requester = ?, hash_requester = ?, "
             u"SET total_up_responder = ?, total_down_responder = ?, "
             u"sequence_number_responder = ?, previous_hash_responder = ?, "
             u"signature_responder = ?, hash_responder = ? "
@@ -127,8 +119,6 @@ class MultiChainDB(Database):
         db_result = self.execute(db_query, (public_key, public_key)).fetchone()[0]
 
         return str(db_result) if db_result else None
-
-        # TODO Is the logic of this query even correct?
 
     def get_latest_block(self, public_key):
         return self.get_by_hash(self.get_latest_hash(public_key))
@@ -276,8 +266,6 @@ class MultiChainDB(Database):
         return (db_result[0], db_result[1]) if db_result[0] is not None and db_result[1] is not None \
             else (-1, -1)
 
-        # TODO Is the logic of this query even correct?
-
     def open(self, initial_statements=True, prepare_visioning=True):
         return super(MultiChainDB, self).open(initial_statements, prepare_visioning)
 
@@ -367,7 +355,7 @@ class DatabaseBlock:
                     sha256(encode_block_requester_half(payload, requester.public_key, responder.public_key)).digest(),
                     payload.total_up_responder, payload.total_down_responder,
                     payload.sequence_number_responder, payload.previous_hash_responder,
-                    payload.signature_responder, sha256(encode_block(payload)).digest(),
+                    payload.signature_responder, sha256(encode_block(payload, requester, responder)).digest(),
                     None))
 
     def to_payload(self):

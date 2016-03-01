@@ -64,7 +64,8 @@ class MultiChainConversion(BinaryConversion):
         self.define_meta_message(chr(4), community.get_meta_message(CRAWL_RESUME),
                                  self._encode_crawl_resume, self._decode_crawl_resume)
 
-    def _encode_signature(self, message):
+    @staticmethod
+    def _encode_signature(message):
         """
         Encode the signature message
         :param message: Message.impl of SIGNATURE
@@ -77,7 +78,8 @@ class MultiChainConversion(BinaryConversion):
                                         payload.total_up_responder, payload.total_down_responder,
                                         payload.sequence_number_responder, payload.previous_hash_responder)),
 
-    def _decode_signature(self, placeholder, offset, data):
+    @staticmethod
+    def _decode_signature(placeholder, offset, data):
         """
         Decode an incoming signature message
         :param placeholder:
@@ -94,7 +96,8 @@ class MultiChainConversion(BinaryConversion):
         return \
             offset, placeholder.meta.payload.implement(*values)
 
-    def _encode_crawl_request(self, message):
+    @staticmethod
+    def _encode_crawl_request(message):
         """
         Encode a crawl request message.
         :param message: Message.impl of CrawlRequestPayload.impl
@@ -102,7 +105,8 @@ class MultiChainConversion(BinaryConversion):
         """
         return pack(crawl_request_format, message.payload.requested_sequence_number),
 
-    def _decode_crawl_request(self, placeholder, offset, data):
+    @staticmethod
+    def _decode_crawl_request(placeholder, offset, data):
         """
         Decode an incoming crawl request message.
         :param placeholder:
@@ -118,7 +122,8 @@ class MultiChainConversion(BinaryConversion):
 
         return offset, placeholder.meta.payload.implement(*values)
 
-    def _encode_crawl_response(self, message):
+    @staticmethod
+    def _encode_crawl_response(message):
         """
         Encode a crawl response message.
         :param message: Message.impl of CrawlResponsePayload.impl
@@ -127,7 +132,8 @@ class MultiChainConversion(BinaryConversion):
         payload = message.payload
         return encode_block(payload),
 
-    def _decode_crawl_response(self, placeholder, offset, data):
+    @staticmethod
+    def _decode_crawl_response(placeholder, offset, data):
         """
         Decode an incoming crawl response message.
         :param placeholder:
@@ -144,7 +150,8 @@ class MultiChainConversion(BinaryConversion):
         return \
             offset, placeholder.meta.payload.implement(*values)
 
-    def _encode_crawl_resume(self, message):
+    @staticmethod
+    def _encode_crawl_resume(message):
         """
         Encode a crawl resume message.
         :param message: Message.impl of CrawlResumePayload.impl
@@ -152,7 +159,8 @@ class MultiChainConversion(BinaryConversion):
         """
         return '',
 
-    def _decode_crawl_resume(self, placeholder, offset, data):
+    @staticmethod
+    def _decode_crawl_resume(placeholder, offset, data):
         """
         Decode an incoming crawl resume message.
         :param placeholder:
@@ -161,6 +169,7 @@ class MultiChainConversion(BinaryConversion):
         :return: (offset, CrawlResume.impl)
         """
         return offset, placeholder.meta.payload.implement()
+
 
 def split_function(payload):
     """
@@ -176,6 +185,8 @@ def encode_block(payload, requester, responder):
     """
     This function encodes a block.
     :param payload: Payload containing the data as properties
+    :param requester: The requester of the block as a dispersy member
+    :param responder: The responder of the block as a dispersy member
     :return: encoding
     """
     """ Test code sometimes run a different curve with a different key length resulting in hard to catch bugs."""
