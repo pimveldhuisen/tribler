@@ -130,7 +130,7 @@ class MultiChainConversion(BinaryConversion):
         :return encoding ready to be sent to the network of the message
         """
         payload = message.payload
-        return encode_block(payload),
+        return encode_block_crawl(payload),
 
     @staticmethod
     def _decode_crawl_response(placeholder, offset, data):
@@ -184,7 +184,8 @@ def split_function(payload):
 def encode_block(payload, requester, responder):
     """
     This function encodes a block.
-    :param payload: Payload containing the data as properties
+    :param payload: Payload containing the data as properties, not including the requester and responder data.
+    for example a signature request/response payload.
     :param requester: The requester of the block as a dispersy member
     :param responder: The responder of the block as a dispersy member
     :return: encoding
@@ -201,9 +202,25 @@ def encode_block(payload, requester, responder):
                                          responder[1].public_key, responder[0]))
 
 
-def encode_block_requester_half(payload, requester, responder):
-    return pack(requester_half_format, *(requester[1].public_key, responder[1].public_key,
+def encode_block_requester_half(payload, public_key_requester, public_key_responder, signature_requester):
+    return pack(requester_half_format, *(public_key_requester, public_key_responder,
                                          payload.up, payload.down,
                                          payload.total_up_requester, payload.total_down_requester,
                                          payload.sequence_number_requester, payload.previous_hash_requester,
-                                         requester[0]))
+                                         signature_requester))
+
+
+def encode_block_crawl(payload):
+    """
+    This function encodes a block for the crawler.
+    :param payload: Payload containing the data as properties, including the requester and responder,
+    for example a crawl response payload.
+    :return: encoding
+    """
+    return pack(crawl_response_format, *(payload.up, payload.down,
+                                         payload.total_up_requester, payload.total_down_requester,
+                                         payload.sequence_number_requester, payload.previous_hash_requester,
+                                         payload.total_up_responder, payload.total_down_responder,
+                                         payload.sequence_number_responder, payload.previous_hash_responder,
+                                         payload.public_key_requester, payload.signature_requester,
+                                         payload.public_key_responder, payload.signature_responder))

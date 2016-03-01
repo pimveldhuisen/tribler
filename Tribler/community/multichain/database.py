@@ -4,7 +4,8 @@ from os import path
 from hashlib import sha256
 
 from Tribler.dispersy.database import Database
-from Tribler.community.multichain.conversion import encode_block, encode_block_requester_half, EMPTY_HASH
+from Tribler.community.multichain.conversion import encode_block, encode_block_requester_half, encode_block_crawl,\
+    EMPTY_HASH
 
 DATABASE_DIRECTORY = path.join(u"sqlite")
 """ Path to the database location + dispersy._workingdirectory"""
@@ -325,7 +326,8 @@ class DatabaseBlock:
         return cls((requester[1].public_key, responder[1].public_key, payload.up, payload.down,
                     payload.total_up_requester, payload.total_down_requester,
                     payload.sequence_number_requester, payload.previous_hash_requester,
-                    requester[0], sha256(encode_block_requester_half(payload, requester, responder)).digest(),
+                    requester[0], sha256(encode_block_requester_half(payload, requester[1].public_key,
+                                                                     responder[1].public_key, requester[0])).digest(),
                     payload.total_up_responder, payload.total_down_responder,
                     payload.sequence_number_responder, payload.previous_hash_responder,
                     responder[0], sha256(encode_block(payload, requester, responder)).digest(),
@@ -339,7 +341,8 @@ class DatabaseBlock:
         return cls((requester[1].public_key, responder[1].public_key, payload.up, payload.down,
                     payload.total_up_requester, payload.total_down_requester,
                     payload.sequence_number_requester, payload.previous_hash_requester,
-                    requester[0], sha256(encode_block_requester_half(payload, requester, responder)).digest(),
+                    requester[0], sha256(encode_block_requester_half(payload, requester[1].public_key,
+                                                                     responder[1].public_key, requester[0])).digest(),
                     -1, -1,
                     -1, EMPTY_HASH,
                     "", EMPTY_HASH,
@@ -352,10 +355,12 @@ class DatabaseBlock:
                     payload.total_up_requester, payload.total_down_requester,
                     payload.sequence_number_requester, payload.previous_hash_requester,
                     payload.signature_requester,
-                    sha256(encode_block_requester_half(payload, requester.public_key, responder.public_key)).digest(),
+                    sha256(encode_block_requester_half(payload, payload.public_key_requester,
+                                                       payload.public_key_responder,
+                                                       payload.signature_requester)).digest(),
                     payload.total_up_responder, payload.total_down_responder,
                     payload.sequence_number_responder, payload.previous_hash_responder,
-                    payload.signature_responder, sha256(encode_block(payload, requester, responder)).digest(),
+                    payload.signature_responder, sha256(encode_block_crawl(payload)).digest(),
                     None))
 
     def to_payload(self):

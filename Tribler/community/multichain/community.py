@@ -300,7 +300,7 @@ class MultiChainCommunity(Community):
             self.crawl_requested(message.candidate, message.payload.requested_sequence_number)
 
     def crawl_requested(self, candidate, sequence_number):
-        blocks = self.persistence.get_blocks_since(self._private_key, sequence_number)
+        blocks = self.persistence.get_blocks_since(self._public_key, sequence_number)
         if len(blocks) > 0:
             self.logger.info("Crawler: Sending %d blocks" % len(blocks))
             messages = [self.get_meta_message(CRAWL_RESPONSE)
@@ -332,8 +332,8 @@ class MultiChainCommunity(Community):
             responder = self.dispersy.get_member(public_key=message.payload.public_key_responder)
             block = DatabaseBlock.from_block_response_message(message, requester, responder)
             # Create the hash of the message
-            if not self.persistence.contains(block.id):
-                self.logger.info("Crawler: Persisting id: %s" % base64.encodestring(block.id).strip())
+            if not self.persistence.contains(block.hash_requester):
+                self.logger.info("Crawler: Persisting id: %s" % base64.encodestring(block.hash_requester).strip())
                 self.persistence.add_block(block)
             else:
                 self.logger.info("Crawler: Received already known block")
@@ -404,9 +404,9 @@ class MultiChainCommunity(Community):
                 # Tie breaker to prevent both parties from requesting
                 if self._public_key > candidate.get_member().public_key:
                     self.schedule_block(candidate, bytes_up, bytes_down)
-                #else:
-                    #TODO Note that you still expect a signature request for these bytes:
-                    #pending[peer] = (up, down)
+                # else:
+                    # TODO Note that you still expect a signature request for these bytes:
+                    # pending[peer] = (up, down)
 
 
 class MultiChainCommunityCrawler(MultiChainCommunity):
