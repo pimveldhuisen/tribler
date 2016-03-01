@@ -138,11 +138,10 @@ class MultiChainCommunity(Community):
             :param bytes_up: The bytes you have uploaded to the peer in this interaction
             :param bytes_down: The bytes you have downloaded from the peer in this interaction
             """
-            self.logger.error("MULTICHAIN: Schedule Block called. Candidate: " + str(candidate) + " UP: " +
+            self.logger.info("MULTICHAIN: Schedule Block called. Candidate: " + str(candidate) + " UP: " +
                               str(bytes_up) + " DOWN: " + str(bytes_down))
             self.add_discovered_candidate(candidate)
             if candidate and candidate.get_member():
-                self.logger.error("MULTICHAIN: Candidate found")
                 """ Convert to MB """
                 total_amount_sent_mb = bytes_up / MEGA_DIVIDER
                 total_amount_received_mb = bytes_down / MEGA_DIVIDER
@@ -150,7 +149,6 @@ class MultiChainCommunity(Community):
                 """ Try to send the request """
                 self.publish_signature_request_message(candidate, total_amount_sent_mb, total_amount_received_mb)
             else:
-                self.logger.error("MULTICHAIN: Candidate not found")
                 self.logger.warn(
                     "No valid candidate found for: %s:%s to request block from." % (candidate[0], candidate[1]))
 
@@ -244,8 +242,6 @@ class MultiChainCommunity(Community):
 
             if request.payload.sequence_number_requester == response.payload.sequence_number_requester and \
                request.payload.previous_hash_requester == response.payload.previous_hash_requester and modified:
-                block = DatabaseBlock.from_signature_response_message(response)
-                self.persistence.update_block_with_responder(block)
                 return True
             else:
                 return False
@@ -258,17 +254,27 @@ class MultiChainCommunity(Community):
 
         self.logger.info("Valid %s signature response(s) received." % len(messages))
         for message in messages:
-            self.persist_signature_response(message)
+            self.update_signature_response(message)
 
     def persist_signature_response(self, message):
         """
-        Persist the signature response message.
+        Persist the signature response message, when this node has not yet persisted the corresponding request block.
         A hash will be created from the message and this will be used as an unique identifier.
         :param message:
         """
         block = DatabaseBlock.from_signature_response_message(message)
         self.logger.info("Persisting sr: %s" % base64.encodestring(block.hash_requester).strip())
         self.persistence.add_block(block)
+
+    def update_signature_response(self, message):
+        """
+        Update the signature response message, when this node has already persisted the corresponding request block.
+        A hash will be created from the message and this will be used as an unique identifier.
+        :param message:
+        """
+        block = DatabaseBlock.from_signature_response_message(message)
+        self.logger.info("Persisting sr: %s" % base64.encodestring(block.hash_requester).strip())
+        self.persistence.update_block_with_responder(block)
 
     def persist_signature_request(self, message):
         """
