@@ -283,38 +283,6 @@ class TestDatabase(MultiChainTestCase):
         self.assertEqual(-1, result_up)
         self.assertEqual(-1, result_down)
 
-    def test_get_total_half_signed(self):
-        """
-        Half signed records should not be counted in the total.
-        """  # Arrange
-        dispersy = self.MockDispersy()
-        db = MultiChainDB(dispersy, self.getStateDir())
-        block1 = self.getNewAddedBlock(db, dispersy)
-        block2 = TestBlock()
-        half_signed_block = TestBlock.half_signed()
-
-        block2.public_key_requester = half_signed_block.public_key_requester = block1.public_key_responder
-        block2.mid_requester = half_signed_block.mid_requester = block1.mid_responder
-
-        half_signed_block.sequence_number_requester = block1.sequence_number_responder + 1
-        block2.sequence_number_requester = half_signed_block.sequence_number_requester + 1
-
-        half_signed_block.total_up_requester = block1.total_up_responder + half_signed_block.up
-        half_signed_block.total_down_requester = block1.total_down_responder + half_signed_block.down
-
-        block2.total_up_requester = block1.total_up_responder + block2.up
-        block2.total_down_requester = block1.total_down_responder + block2.down
-
-        db.add_block(half_signed_block)
-        self.addMembersToDispersy(dispersy, half_signed_block)
-        db.add_block(block2)
-        self.addMembersToDispersy(dispersy, block2)
-        # Act
-        (result_up, result_down) = db.get_total(block2.mid_requester)
-        # Assert
-        self.assertEqual(block2.total_up_requester, result_up)
-        self.assertEqual(block2.total_down_requester, result_down)
-
     def test_save_large_upload_download_block(self):
         """
         Test if the block can save very large numbers.
