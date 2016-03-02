@@ -25,24 +25,6 @@ class TestMultiChainCommunity(DispersyTestFunc):
     """
     """ This test class only runs if there is another testcase in this file."""
 
-    def test_notify_tunnel_remove(self):
-        """
-        Test the community to respond to a notify signal
-        """
-       # session = Session()
-      #  community = MultiChainCommunity()
-
-        node, other = self.create_nodes(2)
-
-        tunnel = Circuit(long(42), 1, ("123.123.123.123", 45))
-        stats = {}
-        stats['bytes_up'] = 420
-        stats['bytes_down'] = 42
-        from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
-        Session.get_instance().notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, tunnel, stats)
-
-        #TODO validate recieving
-
     def test_publish_signature_request_message(self):
         """
         Test the community to publish a signature request message.
@@ -345,7 +327,6 @@ class TestMultiChainCommunity(DispersyTestFunc):
         blocks_other = map(other.community.persistence.get_by_hash_requester, ids_other)
 
         for block_node, block_other in zip(blocks_node, blocks_other):
-            print("COMPARE:" + str(block_node.hash_responder) + "|" + str(block_other.hash_responder))
             if block_node.hash_requester != block_other.hash_requester or \
                block_node.hash_responder != block_other.hash_responder:
                 return False
