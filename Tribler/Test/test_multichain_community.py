@@ -20,6 +20,19 @@ from Tribler.dispersy.tests.debugcommunity.node import DebugNode
 
 
 class TestMultiChainCommunity(DispersyTestFunc):
+    class MockSession():
+        def add_observer(self, func, subject, changeTypes=[], objectID=None, cache=0):
+            pass
+    
+    def setUp(self):
+        super(TestMultiChainCommunity, self).setUp()
+        Session.__single = self.MockSession()
+    
+    def tearDown(self):
+        Session.del_instance()
+        super(TestMultiChainCommunity, self).tearDown()
+        
+    
     """
     Class that tests the MultiChainCommunity on an integration level.
     """
