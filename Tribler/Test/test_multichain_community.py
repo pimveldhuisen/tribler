@@ -10,7 +10,8 @@ from Tribler.Core.Session import Session
 from Tribler.community.multichain.community import  MultiChainCommunity, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME
 from Tribler.community.multichain.conversion import EMPTY_HASH
 
-from Tribler.community.tunnel.routing import Circuit
+from Tribler.community.tunnel.routing import Circuit, RelayRoute
+from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 
 from Tribler.Test.test_as_server import BaseTestCase
 
@@ -20,10 +21,13 @@ from Tribler.dispersy.tests.debugcommunity.node import DebugNode
 
 
 class TestMultiChainCommunity(DispersyTestFunc):
+    """
+    Class that tests the MultiChainCommunity on an integration level.
+    """
     class MockSession():
         def add_observer(self, func, subject, changeTypes=[], objectID=None, cache=0):
             pass
-    
+
     def setUp(self):
         super(TestMultiChainCommunity, self).setUp()
         Session.__single = self.MockSession()
@@ -31,12 +35,163 @@ class TestMultiChainCommunity(DispersyTestFunc):
     def tearDown(self):
         Session.del_instance()
         super(TestMultiChainCommunity, self).tearDown()
-        
-    
-    """
-    Class that tests the MultiChainCommunity on an integration level.
-    """
-    """ This test class only runs if there is another testcase in this file."""
+
+    def test_on_tunnel_remove_circuit(self):
+        """
+        Test the on_tunnel_remove handler function for a circuit
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        target_other = self._create_target(node, other)
+        target_node = self._create_target(other, node)
+        tunnel = Circuit(long(0), 0)
+        up = 12
+        down = 14
+        stats_node = dict()
+        stats_other = dict()
+        stats_node['bytes_up'] = up * 1024*1024
+        stats_node['bytes_down'] = down * 1024*1024
+        stats_other['bytes_up'] = down * 1024*1024
+        stats_other['bytes_down'] = up * 1024*1024
+        # Act
+        node.call(node.community.on_tunnel_remove, None, None, tunnel, stats_node, target_other)
+        other.call(other.community.on_tunnel_remove, None, None, tunnel, stats_other, target_node)
+        # Assert
+        # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
+        failures = 0
+        try:
+            _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
+            other.give_message(signature_request, node)
+            _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
+            node.give_message(signature_response, node)
+        except StopIteration:
+            failures += 1
+        try:
+            _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
+            node.give_message(signature_request, other)
+            _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
+            other.give_message(signature_response, other)
+        except StopIteration:
+            failures += 1
+        self.assertEquals(failures, 1)
+        self.assertEqual((up, down), node.call(node.community._get_next_total, 0, 0))
+        self.assertEqual((down, up), other.call(other.community._get_next_total, 0, 0))
+
+    def test_on_tunnel_remove_relay(self):
+        """
+        Test the on_tunnel_remove handler function for a relay
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        target_other = self._create_target(node, other)
+        target_node = self._create_target(other, node)
+        tunnel = RelayRoute(None, None, None)
+        up = 12
+        down = 14
+        stats_node = dict()
+        stats_other = dict()
+        stats_node['bytes_relay_up'] = up * 1024*1024
+        stats_node['bytes_relay_down'] = down * 1024*1024
+        stats_other['bytes_relay_up'] = down * 1024*1024
+        stats_other['bytes_relay_down'] = up * 1024*1024
+        # Act
+        node.call(node.community.on_tunnel_remove, None, None, tunnel, stats_node, target_other)
+        other.call(other.community.on_tunnel_remove, None, None, tunnel, stats_other, target_node)
+        # Assert
+        # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
+        failures = 0
+        try:
+            _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
+            other.give_message(signature_request, node)
+            _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
+            node.give_message(signature_response, node)
+        except StopIteration:
+            failures += 1
+        try:
+            _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
+            node.give_message(signature_request, other)
+            _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
+            other.give_message(signature_response, other)
+        except StopIteration:
+            failures += 1
+        self.assertEquals(failures, 1)
+        self.assertEqual((up, down), node.call(node.community._get_next_total, 0, 0))
+        self.assertEqual((down, up), other.call(other.community._get_next_total, 0, 0))
+
+    def test_on_tunnel_remove_exit(self):
+        """
+        Test the on_tunnel_remove handler function
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        target_other = self._create_target(node, other)
+        target_node = self._create_target(other, node)
+        tunnel = TunnelExitSocket(None, None, None)
+        up = 12
+        down = 14
+        stats_node = dict()
+        stats_other = dict()
+        stats_node['bytes_exit'] = up * 1024*1024
+        stats_node['bytes_enter'] = down * 1024*1024
+        stats_other['bytes_exit'] = down * 1024*1024
+        stats_other['bytes_enter'] = up * 1024*1024
+
+        # Act
+        node.call(node.community.on_tunnel_remove, None, None, tunnel, stats_node, target_other)
+        other.call(other.community.on_tunnel_remove, None, None, tunnel, stats_other, target_node)
+        # Assert
+        # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
+        failures = 0
+        try:
+            _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
+            other.give_message(signature_request, node)
+            _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
+            node.give_message(signature_response, node)
+        except StopIteration:
+            failures += 1
+        try:
+            _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
+            node.give_message(signature_request, other)
+            _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
+            other.give_message(signature_response, other)
+        except StopIteration:
+            failures += 1
+        self.assertEquals(failures, 1)
+        self.assertEqual((up, down), node.call(node.community._get_next_total, 0, 0))
+        self.assertEqual((down, up), other.call(other.community._get_next_total, 0, 0))
+
+    def test_on_tunnel_remove_NoneType(self):
+        """
+        Test the on_tunnel_remove handler function to handle a NoneType
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        # Act
+        try:
+            node.call(node.community.on_tunnel_remove, None, None, None, None, None)
+        except TypeError:
+            error = True
+        # Assert
+        self.assertTrue(error)
+
+    def test_schedule_block(self):
+        """
+        Test the schedule_block function.
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        target_other = self._create_target(node, other)
+        # Act
+        node.call(node.community.schedule_block, target_other, 5*1024*1024, 10*1024*1024+42000)
+        _, message = other.receive_message(names=[u"dispersy-signature-request"]).next()
+        # Assert
+        self.assertTrue(message)
+        self.assertEqual((5, 10), node.call(node.community._get_next_total, 0, 0))
 
     def test_publish_signature_request_message(self):
         """
@@ -48,7 +203,7 @@ class TestMultiChainCommunity(DispersyTestFunc):
         # Act
         result = node.call(node.community.publish_signature_request_message, target_other, 5, 5)
         # Assert
-        message = other.receive_message(names=[u"dispersy-signature-request"]).next()
+        _, message = other.receive_message(names=[u"dispersy-signature-request"]).next()
         self.assertTrue(message)
         self.assertTrue(result)
 
@@ -83,6 +238,36 @@ class TestMultiChainCommunity(DispersyTestFunc):
         block = other.call(other.community.persistence.get_latest_block, other.community._public_key)
         self.assertNotEquals(block.hash_responder, EMPTY_HASH)
 
+    def test_receive_signature_response(self):
+        """
+        Test the community to receive a signature request message.
+        """
+        # Arrange
+        node, other = self.create_nodes(2)
+        other.send_identity(node)
+        target_other = self._create_target(node, other)
+        node.call(node.community.publish_signature_request_message, target_other, 10, 5)
+        # Assert: Block should now be in the database of the node as halfsigned
+        block = node.call(node.community.persistence.get_latest_block, node.community._public_key)
+        self.assertEquals(block.hash_responder, EMPTY_HASH)
+        # Ignore source, as it is a Candidate. We need to use DebugNodes in test.
+        _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
+        # Act
+        other.give_message(signature_request, node)
+        """ Return the response. """
+        # Ignore source, as it is a Candidate. We need to use DebugNodes in test.
+        _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
+        node.give_message(signature_response, node)
+        # Assert
+        self.assertTrue(self.assertBlocksInDatabase(other, 1))
+        self.assertTrue(self.assertBlocksInDatabase(node, 1))
+        self.assertTrue(self.assertBlocksAreEqual(node, other))
+
+        block = node.call(node.community.persistence.get_latest_block, node.community._public_key)
+        self.assertNotEquals(block.hash_responder, EMPTY_HASH)
+
+        block = other.call(other.community.persistence.get_latest_block, other.community._public_key)
+        self.assertNotEquals(block.hash_responder, EMPTY_HASH)
 
     def test_block_values(self):
         """
@@ -138,7 +323,7 @@ class TestMultiChainCommunity(DispersyTestFunc):
 
     def test_request_block_latest(self):
         """
-        Test the crawler methods.
+        Test the crawler to request the latest block.
         """
         # Arrange
         node, other, crawler = self.create_nodes(3)
@@ -198,7 +383,7 @@ class TestMultiChainCommunity(DispersyTestFunc):
 
     def test_request_block_specified_sequence_number(self):
         """
-        Test the crawler methods.
+        Test the crawler to fetch a block with a specified sequence number.
         """
         # Arrange
         node, other, crawler = self.create_nodes(3)
@@ -244,7 +429,7 @@ class TestMultiChainCommunity(DispersyTestFunc):
 
     def test_request_block_known(self):
         """
-        Test the crawler methods.
+        Test the crawler to request a known block.
         """
         # Arrange
         node, other, crawler = self.create_nodes(3)
