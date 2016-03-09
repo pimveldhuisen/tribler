@@ -47,22 +47,11 @@ class TestDatabase(MultiChainTestCase):
         if not os.path.exists(path):
             os.makedirs(path)
 
-  #  def addMembersToDispersy(self, dispersy, block):
-  #      dispersy.get_member(public_key=block.public_key_requester, mid=block.mid_requester)
-  #      dispersy.get_member(public_key=block.public_key_responder, mid=block.mid_responder)
-
-    def getNewAddedBlock(self, db, dispersy):
-        block = TestBlock()
-        db.add_block(block)
-        self.addMembersToDispersy(dispersy, block)
-        return block
-
     def test_add_block(self):
         # Arrange
         dispersy = self.MockDispersy()
         db = MultiChainDB(dispersy, self.getStateDir())
         block1 = TestBlock()
-       # self.addMembersToDispersy(dispersy, block1)
         # Act
         db.add_block(block1)
         # Assert
@@ -74,7 +63,6 @@ class TestDatabase(MultiChainTestCase):
         dispersy = self.MockDispersy()
         db = MultiChainDB(dispersy, self.getStateDir())
         block1 = TestBlock()
-       # self.addMembersToDispersy(dispersy, block1)
         # Act
         db.add_block(block1)
         # Assert
@@ -91,28 +79,13 @@ class TestDatabase(MultiChainTestCase):
         dispersy = self.MockDispersy()
         db = MultiChainDB(dispersy, self.getStateDir())
         block1 = TestBlock()
-       # self.addMembersToDispersy(dispersy, block1)
         block2 = TestBlock()
-       # self.addMembersToDispersy(dispersy, block2)
         # Act
         db.add_block(block1)
         db.add_block(block2)
         # Assert
         result = db.get_by_hash_requester(block2.hash_requester)
         self.assertEqual_block(block2, result)
-
- #   def test_add_block_valid_pk(self):
-        # Arrange
-  #      dispersy = self.MockDispersy()
-  #      db = MultiChainDB(dispersy, self.getStateDir())
-   #     block1 = self.getNewAddedBlock(db, dispersy)
-        # Act
-    #    pk_req = db.get_by_block_id(block1.id).public_key_requester
-     #   pk_res = db.get_by_block_id(block1.id).public_key_responder
-        # Assert
-      #  crypto = ECCrypto()
-       # self.assertTrue(crypto.is_valid_public_bin(pk_req), "Invalid public binary for pk requester.")
-        #self.assertTrue(crypto.is_valid_public_bin(pk_res), "Invalid public binary for pk responder.")
 
     def test_get_block_non_existing(self):
         # Arrange
@@ -232,7 +205,6 @@ class TestDatabase(MultiChainTestCase):
         # To test that it will look for both responder and requester.
         dispersy = self.MockDispersy()
         db = MultiChainDB(dispersy, self.getStateDir())
-        #block1 = self.getNewAddedBlock(db, dispersy)
         block1 = TestBlock()
         db.add_block(block1)
         # Act & Assert
@@ -324,8 +296,6 @@ class TestDatabase(MultiChainTestCase):
         self.assertEquals(time_difference.days, 0)
         self.assertLess(time_difference.seconds, 10,
                         "Difference in stored and retrieved time is too large.")
-
-
 
 
 if __name__ == '__main__':

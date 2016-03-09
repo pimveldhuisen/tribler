@@ -13,6 +13,7 @@ from Tribler.Test.test_as_server import AbstractServer
 from Tribler.community.multichain.conversion import EMPTY_HASH
 from Tribler.community.multichain.database import DatabaseBlock
 
+
 class TestBlock(DatabaseBlock):
     """
     Test Block that simulates a block message used in MultiChain.
@@ -70,13 +71,6 @@ class TestBlock(DatabaseBlock):
 
                                 None))
 
-    @property
-    def id(self):
-        return self.generate_hash()
-
-    def generate_common_part(self):
-        return [self.public_key_requester, self.public_key_responder, self.up, self.down]
-
     def generate_requester(self):
         return [self.up, self.down,
                 self.total_up_requester, self.total_down_requester,
@@ -94,24 +88,6 @@ class TestBlock(DatabaseBlock):
                                                                          self.signature_requester,
                                                                          self.public_key_responder,
                                                                          self.signature_responder]
-
-    def generate_hash(self):
-        # This block uses a different way of generating the hash.
-        data = encode_signing_format(self.generate_block_payload())
-        return sha256(data).digest()
-
-    @classmethod
-    def half_signed(cls):
-        """
-        Create a half_signed TestBlock
-        """
-        block = cls()
-        block.previous_hash_responder = EMPTY_HASH
-        block.sequence_number_responder = -1
-        block.signature_responder = ''
-        block.total_down_responder = -1
-        block.total_up_responder = -1
-        return block
 
 
 class MultiChainTestCase(AbstractServer):

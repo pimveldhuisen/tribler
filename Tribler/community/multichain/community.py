@@ -349,9 +349,6 @@ class MultiChainCommunity(Community):
         for message in messages:
             self.send_crawl_request(message.candidate)
 
-    def get_key(self):
-        return self._private_key
-
     def _get_next_total(self, up, down):
         """
         Returns the next total numbers of up and down incremented with the current interaction up and down metric.
