@@ -2,8 +2,6 @@
 This file contains the tests for the community.py for MultiChain community.
 """
 import time
-import uuid
-import logging
 
 from Tribler.Core.Session import Session
 
@@ -13,14 +11,15 @@ from Tribler.community.multichain.conversion import EMPTY_HASH
 from Tribler.community.tunnel.routing import Circuit, RelayRoute
 from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 
-from Tribler.Test.test_as_server import BaseTestCase
+from Tribler.Test.test_as_server import AbstractServer
 
 from Tribler.dispersy.tests.dispersytestclass import DispersyTestFunc
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 from Tribler.dispersy.tests.debugcommunity.node import DebugNode
 
 
-class TestMultiChainCommunity(DispersyTestFunc):
+
+class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
     """
     Class that tests the MultiChainCommunity on an integration level.
     """
@@ -29,12 +28,14 @@ class TestMultiChainCommunity(DispersyTestFunc):
             pass
 
     def setUp(self):
-        super(TestMultiChainCommunity, self).setUp()
         Session.__single = self.MockSession()
-    
+        AbstractServer.setUp(self)
+        DispersyTestFunc.setUp(self)
+
     def tearDown(self):
         Session.del_instance()
-        super(TestMultiChainCommunity, self).tearDown()
+        DispersyTestFunc.tearDown(self)
+        AbstractServer.tearDown(self)
 
     def test_on_tunnel_remove_circuit(self):
         """
