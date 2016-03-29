@@ -43,9 +43,6 @@ class MultiChainCommunity(Community):
     Community for reputation based on MultiChain tamper proof interaction history.
     """
 
-    """ Amount of time the MultiChain waits on a signature requests before it times out"""
-    signature_request_timeout = 5.0
-
     def __init__(self, *args, **kwargs):
         super(MultiChainCommunity, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -162,8 +159,7 @@ class MultiChainCommunity(Community):
         return (bool) if request is sent.
         """
         message = self.create_signature_request_message(candidate, up, down)
-        self.create_signature_request(candidate, message, self.allow_signature_response,
-                                      timeout=self.signature_request_timeout)
+        self.create_signature_request(candidate, message, self.allow_signature_response)
         self.persist_signature_request(message)
         return True
 
