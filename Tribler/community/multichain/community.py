@@ -284,7 +284,7 @@ class MultiChainCommunity(Community):
 
     def send_crawl_request(self, candidate, sequence_number=None):
         if sequence_number is None:
-            sequence_number = self.persistence.get_latest_sequence_number(candidate.get_member().mid)
+            sequence_number = self.persistence.get_latest_sequence_number(candidate.get_member().public_key)
         self.logger.info("Crawler: Requesting crawl from node %s, from sequence number %d" %
                          (base64.encodestring(candidate.get_member().mid).strip(), sequence_number))
         meta = self.get_meta_message(CRAWL_REQUEST)
