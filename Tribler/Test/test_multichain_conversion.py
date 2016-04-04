@@ -266,38 +266,32 @@ class TestCommunity(Community):
                     DirectDistribution(),
                     CandidateDestination(),
                     SignaturePayload(),
-                    self._community_do_nothing,
-                    self._community_do_nothing),
+                    lambda: None,
+                    lambda: None),
             Message(self, CRAWL_REQUEST,
                     NoAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
                     CrawlRequestPayload(),
-                    self._community_do_nothing,
-                    self._community_do_nothing),
+                    lambda: None,
+                    lambda: None),
             Message(self, CRAWL_RESPONSE,
                     NoAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
                     CrawlResponsePayload(),
-                    self._community_do_nothing,
-                    self._community_do_nothing),
+                    lambda: None,
+                    lambda: None),
             Message(self, CRAWL_RESUME,
                     NoAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
                     CrawlResumePayload(),
-                    self._community_do_nothing,
-                    self._community_do_nothing)]
-
-    def _community_do_nothing(self):
-        """
-        Function that does nothing to implement for a community
-        """
-        return
+                    lambda: None,
+                    lambda: None)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
