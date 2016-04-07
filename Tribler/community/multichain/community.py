@@ -24,8 +24,8 @@ from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.community.tunnel.routing import Circuit, RelayRoute
 from Tribler.community.tunnel.tunnel_community import TunnelExitSocket
 
-from Tribler.community.multichain.payload import SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,\
-    CrawlResumePayload
+from Tribler.community.multichain.payload import (SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,
+                                                  CrawlResumePayload)
 from Tribler.community.multichain.database import MultiChainDB, DatabaseBlock
 from Tribler.community.multichain.conversion import MultiChainConversion, split_function, GENESIS_ID
 
