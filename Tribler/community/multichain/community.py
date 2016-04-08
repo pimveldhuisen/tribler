@@ -229,8 +229,6 @@ class MultiChainCommunity(Community):
         """
         if not response:
             self.logger.info("Timeout received for signature request.")
-            # Unpack the message from the cache object and store a half-signed record.
-        #    self.persist_signature_response(request.request.payload.message)
             return False
         else:
             # TODO: Check whether we are expecting a response

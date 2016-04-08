@@ -296,19 +296,19 @@ class DatabaseBlock:
 
     def __init__(self, data):
         """ Create a block from data """
-        """ Common part """
+        # Common part
         self.public_key_requester = str(data[0])
         self.public_key_responder = str(data[1])
         self.up = data[2]
         self.down = data[3]
-        """ Requester part """
+        # Requester part
         self.total_up_requester = data[4]
         self.total_down_requester = data[5]
         self.sequence_number_requester = data[6]
         self.previous_hash_requester = str(data[7])
         self.signature_requester = str(data[8])
         self.hash_requester = str(data[9])
-        """ Responder part """
+        # Responder part
         self.total_up_responder = data[10]
         self.total_down_responder = data[11]
         self.sequence_number_responder = data[12]
