@@ -28,20 +28,20 @@ class TestDatabase(MultiChainTestCase):
         # Act
         self.db.add_block(self.block1)
         # Assert
-        result = self.db.get_latest(block1.public_key)
-        self.assertEqual_block(block1, result)
+        result = self.db.get_latest(self.block1.public_key)
+        self.assertEqual_block(self.block1, result)
 
     def test_add_two_blocks(self):
         # Act
         self.db.add_block(self.block1)
         self.db.add_block(self.block2)
         # Assert
-        result = self.db.get_latest(block2.public_key)
-        self.assertEqual_block(block2, result)
+        result = self.db.get_latest(self.block2.public_key)
+        self.assertEqual_block(self.block2, result)
 
     def test_get_block_non_existing(self):
         # Act
-        result = self.db.get_latest(block1.public_key)
+        result = self.db.get_latest(self.block1.public_key)
         # Assert
         self.assertEqual(None, result)
 
@@ -49,15 +49,15 @@ class TestDatabase(MultiChainTestCase):
         # Act
         self.db.add_block(self.block1)
         # Assert
-        assert db.contains(self.block1)
+        assert self.db.contains(self.block1)
 
     def test_contains_block_id_negative(self):
         # Act & Assert
-        assert not db.contains(self.block1)
+        assert not self.db.contains(self.block1)
 
     def test_get_linked_forward(self):
         # Arrange
-        self.block2 = TestBlock.create(db, self.block2.public_key, link=self.block1)
+        self.block2 = TestBlock.create(self.db, self.block2.public_key, link=self.block1)
         self.db.add_block(self.block1)
         self.db.add_block(self.block2)
         # Act
@@ -67,11 +67,11 @@ class TestDatabase(MultiChainTestCase):
 
     def test_get_linked_backwards(self):
         # Arrange
-        self.block2 = TestBlock.create(db, self.block2.public_key, link=self.block1)
+        self.block2 = TestBlock.create(self.db, self.block2.public_key, link=self.block1)
         self.db.add_block(self.block1)
         self.db.add_block(self.block2)
         # Act
-        result = self.db.get_linked(block2)
+        result = self.db.get_linked(self.block2)
         # Assert
         self.assertEqual_block(self.block1, result)
 
@@ -94,23 +94,20 @@ class TestDatabase(MultiChainTestCase):
 
     def test_get_blocks_until(self):
         # Arrange
-        db = MultiChainDB(self.getStateDir())
-        block1 = TestBlock()
-        block2 = TestBlock()
-        block2.public_key = block1.public_key
-        block2.sequence_number = block1.sequence_number + 1
+        self.block2.public_key = self.block1.public_key
+        self.block2.sequence_number = self.block1.sequence_number + 1
         block3 = TestBlock()
-        block3.public_key = block2.public_key
-        block3.sequence_number = block2.sequence_number + 10
-        db.add_block(block1)
-        db.add_block(block2)
-        db.add_block(block3)
+        block3.public_key = self.block2.public_key
+        block3.sequence_number = self.block2.sequence_number + 10
+        self.db.add_block(self.block1)
+        self.db.add_block(self.block2)
+        self.db.add_block(block3)
         # Act
-        result = db.get_blocks_until(block2.public_key, block2.sequence_number)
+        result = self.db.get_blocks_until(self.block2.public_key, self.block2.sequence_number)
         # Assert
         self.assertEqual(len(result), 2)
-        self.assertEqual_block(block1, result[0])
-        self.assertEqual_block(block2, result[1])
+        self.assertEqual_block(self.block1, result[0])
+        self.assertEqual_block(self.block2, result[1])
 
     def test_save_large_upload_download_block(self):
         """
