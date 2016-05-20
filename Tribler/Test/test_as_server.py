@@ -19,11 +19,11 @@ from Tribler.Main.Utility.utility import initialize_x11_threads
 initialize_x11_threads()
 
 # set wxpython version before importing wx or anything from Tribler
-import wxversion
-if wxversion.checkInstalled("3.0-unicode"):
-    wxversion.select("3.0-unicode")
-else:
-    wxversion.select("2.8-unicode")
+#import wxversion
+#if wxversion.checkInstalled("3.0-unicode"):
+#    wxversion.select("3.0-unicode")
+#else:
+#    wxversion.select("2.8-unicode")
 
 # Make sure the in thread reactor is installed.
 from Tribler.Core.Utilities.twisted_thread import reactor
@@ -44,7 +44,7 @@ from tempfile import mkdtemp
 from threading import Event, enumerate as enumerate_threads
 from traceback import print_exc
 
-import wx
+#import wx
 from .util import process_unhandled_exceptions, UnhandledTwistedExceptionCatcher, process_unhandled_twisted_exceptions
 
 from Tribler.Core.Utilities.twisted_thread import deferred
@@ -358,7 +358,7 @@ class TestAsServer(AbstractServer):
             self._logger.debug(
                 "Waiting for Session to shutdown, will wait for an additional %d seconds", (waittime - diff))
 
-            wx.SafeYield()
+            #wx.SafeYield()
             time.sleep(1)
 
         self._logger.debug("Session has shut down")
@@ -461,7 +461,7 @@ class TestGuiAsServer(TestAsServer):
         self.assertFalse(Session.has_instance(), 'A session instance is already present when setting up the test')
         AbstractServer.setUp(self, annotate=False)
 
-        self.app = wx.GetApp()
+       # self.app = wx.GetApp()
         if not self.app:
             from Tribler.Main.vwxGUI.TriblerApp import TriblerApp
             self.app = TriblerApp(redirect=False)
@@ -479,14 +479,8 @@ class TestGuiAsServer(TestAsServer):
         self.asserts = []
         self.annotate(self._testMethodName, start=True)
 
-        self.wx_watchdog = Event()
         self.twisted_watchdog = Event()
 
-        def wx_watchdog_keepalive():
-            if self.wx_watchdog:
-                self.wx_watchdog.set()
-                wx.CallLater(500, wx_watchdog_keepalive)
-        wx_watchdog_keepalive()
 
         def twisted_watchdog_keepalive():
             if self.twisted_watchdog:
@@ -569,33 +563,17 @@ class TestGuiAsServer(TestAsServer):
 
     def callLater(self, seconds, callback):
         if not self.quitting:
-            if seconds:
-                wx.CallLater(seconds * 1000, callback)
-            elif not wx.Thread_IsMain():
-                wx.CallAfter(callback)
-            else:
-                callback()
+                 callback()
 
     def quit(self):
         if self.frame:
             self.frame.OnCloseWindow()
 
         else:
-            def close_dialogs():
-                for item in wx.GetTopLevelWindows():
-                    if isinstance(item, wx.Dialog):
-                        if item.IsModal():
-                            item.EndModal(wx.ID_CANCEL)
-                        else:
-                            item.Destroy()
-                    else:
-                        item.Close()
 
             def do_quit():
                 self.app.ExitMainLoop()
-                wx.WakeUpMainThread()
 
-            self.callLater(1, close_dialogs)
             self.callLater(2, do_quit)
             self.callLater(3, self.app.Exit)
 
@@ -642,47 +620,3 @@ class TestGuiAsServer(TestAsServer):
         for boolean, reason in self.asserts:
             assert boolean, reason
 
-    def screenshot(self, title=None, destdir=OUTPUT_DIR, window=None):
-        try:
-            from PIL import Image
-        except ImportError:
-            self._logger.error("Could not load PIL: not making screenshots")
-            return
-
-        if window is None:
-            app = wx.GetApp()
-            window = app.GetTopWindow()
-            if not window:
-                self._logger.error("Couldn't obtain top window and no window was passed as argument, bailing out")
-                return
-
-        rect = window.GetClientRect()
-        size = window.GetSize()
-        rect = wx.Rect(rect.x, rect.y, size.x, size.y)
-
-        screen = wx.WindowDC(window)
-        bmp = wx.EmptyBitmap(rect.GetWidth(), rect.GetHeight() + 30)
-
-        mem = wx.MemoryDC(bmp)
-        mem.Blit(0, 30, rect.GetWidth(), rect.GetHeight(), screen, rect.GetX(), rect.GetY())
-
-        titlerect = wx.Rect(0, 0, rect.GetWidth(), 30)
-        mem.DrawRectangleRect(titlerect)
-        if title:
-            mem.DrawLabel(title, titlerect, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL)
-        del mem
-
-        myWxImage = wx.ImageFromBitmap(bmp)
-        im = Image.new('RGB', (myWxImage.GetWidth(), myWxImage.GetHeight()))
-        im.frombytes(myWxImage.GetData())
-
-        if not os.path.exists(destdir):
-            os.makedirs(destdir)
-        index = 1
-        filename = os.path.join(destdir, 'Screenshot-%.2d.png' % index)
-        while os.path.exists(filename):
-            index += 1
-            filename = os.path.join(destdir, 'Screenshot-%.2d.png' % index)
-        im.save(filename)
-
-        del bmp
