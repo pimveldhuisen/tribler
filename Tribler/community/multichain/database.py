@@ -145,18 +145,18 @@ class MultiChainDB(Database):
         :param hash: The hash of the block that needs to be retrieved.
         :return: The block that was requested or None
         """
-        if hash:
-            db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
-                       u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
-                       u"signature_requester, hash_requester, " \
-                       u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
-                       u"signature_responder, hash_responder, insert_time " \
-                       u"FROM `multi_chain` WHERE hash_requester = ? OR hash_responder = ? LIMIT 1"
-            db_result = self.execute(db_query, (buffer(hash), buffer(hash))).fetchone()
-            # Create a DB Block or return None
-            return self._create_database_block(db_result)
-        else:
+        if hash is None:
             return None
+
+        db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                   u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                   u"signature_requester, hash_requester, " \
+                   u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                   u"signature_responder, hash_responder, insert_time " \
+                   u"FROM `multi_chain` WHERE hash_requester = ? OR hash_responder = ? LIMIT 1"
+        db_result = self.execute(db_query, (buffer(hash), buffer(hash))).fetchone()
+        # Create a DB Block or return None
+        return self._create_database_block(db_result)
 
     def get_by_public_key_and_sequence_number(self, public_key, sequence_number):
         """
