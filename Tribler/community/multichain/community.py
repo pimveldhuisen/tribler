@@ -334,6 +334,10 @@ class MultiChainCommunity(Community):
             self.send_crawl_request(message.candidate)
 
     def get_statistics(self):
+        """
+        Returns a dictionary with some statistics regarding the local multichain database
+        :returns a dictionary with statistics
+        """
         statistics = dict()
         statistics["self_id"] = base64.encodestring(self._public_key)
         statistics["self_total_blocks"] = self.persistence.get_latest_sequence_number(self._public_key)
