@@ -1,7 +1,14 @@
 from Tribler.community.tunnel.hidden_community import HiddenTunnelCommunity
+from Tribler.community.tunnel.tunnel_community import Circuit, RelayRoute, TunnelExitSocket
+from Tribler.community.multichain.community import MultiChainCommunity
 
 
 class HiddenTunnelCommunityMultichain(HiddenTunnelCommunity):
+
+    def __init__(self, *args, **kwargs):
+        super(HiddenTunnelCommunityMultichain, self).__init__(*args, **kwargs)
+        self.multichain_community = None
+        self.get_multichain_community()
 
     @classmethod
     def get_master_members(cls, dispersy):
@@ -26,3 +33,47 @@ class HiddenTunnelCommunityMultichain(HiddenTunnelCommunity):
         master_key_hex = master_key.decode("HEX")
         master = dispersy.get_member(public_key=master_key_hex)
         return [master]
+
+    def get_multichain_community(self):
+        try:
+            self.multichain_community = next((c for c in self.dispersy.get_communities() if isinstance(c, MultiChainCommunity)))
+        except StopIteration:
+            self.multichain_community = None
+
+    def increase_bytes_sent(self, obj, num_bytes):
+        self.increase_bytes_pending(obj, num_bytes, 0)
+        super(HiddenTunnelCommunityMultichain, self).increase_bytes_sent(obj, num_bytes)
+
+    def increase_bytes_received(self, obj, num_bytes):
+        self.increase_bytes_pending(obj, 0, num_bytes)
+        super(HiddenTunnelCommunityMultichain, self).increase_bytes_received(obj, num_bytes)
+
+    def increase_bytes_pending(self, obj, delta_up, delta_down):
+        # Make sure we have found the multichain community, or find it now
+        if not self.multichain_community:
+            self.get_multichain_community()
+            if not self.multichain_community:
+                # If we cannot find the multichain community when increase_bytes_sent is called,
+                # we have a problem, as these bytes cannot be accounted for
+                print "BYTES, but no multichain"
+                return
+
+        # Find the public key of the relevant peer
+        if isinstance(obj, Circuit):
+            key = obj.mid
+        elif isinstance(obj, RelayRoute):
+            key = self.circuits[obj.circuit_id].mid
+        elif isinstance(obj, TunnelExitSocket):
+            key = self.circuits[obj.circuit_id].mid
+        else:
+            return
+
+        # Update or create the values in the pending_bytes dict
+        if key in self.multichain_community.pending_bytes:
+            self.multichain_community.pending_bytes[key] += (delta_up, delta_down)
+        else:
+            self.multichain_community.pending_bytes[key] = (delta_up, delta_down)
+            print "key = " + key
+
+
+

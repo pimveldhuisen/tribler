@@ -54,6 +54,11 @@ class MultiChainCommunity(Community):
         # No response is expected yet.
         self.expected_response = None
 
+        # We store the bytes send and received in the tunnel community in a dictionary.
+        # The key is the public key of the peer being interacted with, the value a tuple of the up and down bytes
+        # This data is not used to create outgoing requests, but to verify incoming requests
+        self.pending_bytes = dict()
+
     @classmethod
     def get_master_members(cls, dispersy):
         # generated: Wed Dec  3 10:31:16 2014
@@ -186,8 +191,12 @@ class MultiChainCommunity(Community):
             b. Drop the message. (Future work: notify the sender of dropping)
             :param message The message containing the received signature request.
         """
+        mid = message.authentication.members[0].mid.encode('hex')
         self.logger.info("Received signature request for: [Up = " + str(message.payload.up) + "MB | Down = " +
-                         str(message.payload.down) + " MB]")
+                         str(message.payload.down) + " MB]\n" +
+                         "We have pending: [Up = " + str(self.pending_bytes[mid][0]) +
+                         "MB | Down = " + str(self.pending_bytes[mid][1]) + " MB]")
+
         # TODO: This code always signs a request. Checks and rejects should be inserted here!
         # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
         payload = message.payload
