@@ -36,7 +36,7 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         AbstractServer.setUp(self)
         DispersyTestFunc.setUp(self)
         self.assertEqual_block = MultiChainTestCase.assertEqual_block.__get__(self)
-    
+
     def tearDown(self):
         Session.del_instance()
         DispersyTestFunc.tearDown(self)
@@ -250,10 +250,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         block.up += 10
         block.total_up = block.up
         signature_request = node.community.get_meta_message(HALF_BLOCK).impl(
-                    authentication=(node.community.my_member,),
-                    distribution=(node.community.claim_global_time(),),
-                    destination=(target_other,),
-                    payload=(block,))
+            authentication=(node.community.my_member,),
+            distribution=(node.community.claim_global_time(),),
+            destination=(target_other,),
+            payload=(block,))
         other.give_message(signature_request, node)
 
         self.assertBlocksInDatabase(other, 0)
@@ -261,8 +261,8 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
 
         # Assert
         with self.assertRaises(ValueError):
-            "No signature responses should have been sent"
-            _, block_responses = node.receive_message(names=[HALF_BLOCK])
+            # No signature responses should have been sent
+            _, _ = node.receive_message(names=[HALF_BLOCK])
 
     def test_block_values(self):
         """
