@@ -3,7 +3,7 @@
 from os import path
 
 from Tribler.dispersy.database import Database
-from Tribler.community.multichain.block import GENESIS_ID, EMPTY_PK, EMPTY_SIG, MultiChainBlock
+from Tribler.community.multichain.block import MultiChainBlock
 
 
 DATABASE_DIRECTORY = path.join(u"sqlite")

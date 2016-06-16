@@ -81,7 +81,7 @@ class TestConversion(MultiChainTestCase):
         # Act & Assert
         with self.assertRaises(DropPacket):
             # Remove a bit of message.
-            self.converter._decode_half_block(TestPlaceholder(meta), 0, encoded_message[:-10])[1]
+            _ = self.converter._decode_half_block(TestPlaceholder(meta), 0, encoded_message[:-10])[1]
 
     def test_encoding_decoding_crawl_request(self):
         """
@@ -114,7 +114,7 @@ class TestConversion(MultiChainTestCase):
         # Act & Assert
         with self.assertRaises(DropPacket):
             # Remove a bit of message.
-            result = self.converter._decode_crawl_request(TestPlaceholder(meta), 0, encoded_message[:-10])[1]
+            _ = self.converter._decode_crawl_request(TestPlaceholder(meta), 0, encoded_message[:-10])[1]
 
 
 class TestPlaceholder:
