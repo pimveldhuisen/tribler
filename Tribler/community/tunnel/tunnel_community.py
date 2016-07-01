@@ -1039,7 +1039,7 @@ class TunnelCommunity(Community):
             self.tunnel_logger.info("extending circuit, got candidate with IP %s:%d from cache",
                                     *extend_candidate.sock_addr)
 
-            self.increase_bytes_sent(new_circuit_id, self.send_cell([extend_candidate],
+            self.increase_bytes_sent(self.relay_from_to[new_circuit_id], self.send_cell([extend_candidate],
                                                                     u"create", (new_circuit_id,
                                                                                 message.payload.node_id,
                                                                                 message.payload.node_public_key,
@@ -1126,7 +1126,6 @@ class TunnelCommunity(Community):
 
             elif circuit_id in self.exit_sockets:
                 self.tunnel_logger.info("Got an exit socket %s %s", circuit_id, cand_sock_addr)
-                if cand_sock_addr != self.exit_sockets[circuit_id].sock_addr:
                     self.tunnel_logger.error("%s not allowed send destroy", cand_sock_addr)
                     continue
                 self.remove_exit_socket(circuit_id, "Got destroy")
