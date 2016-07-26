@@ -192,10 +192,11 @@ class MultiChainCommunity(Community):
             :param message The message containing the received signature request.
         """
         mid = message.authentication.members[0].mid.encode('hex')
+        pending = self.get_pending_bytes(mid)
         self.logger.info("Received signature request for: [Up = " + str(message.payload.up) + "MB | Down = " +
                          str(message.payload.down) + " MB]\n" +
-                         "We have pending: [Up = " + str(self.pending_bytes[mid][0]) +
-                         "MB | Down = " + str(self.pending_bytes[mid][1]) + " MB]")
+                         "We have pending: [Up = " + str(pending[0]) +
+                         "MB | Down = " + str(pending[1]) + " MB]")
 
         # TODO: This code always signs a request. Checks and rejects should be inserted here!
         # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
@@ -415,6 +416,16 @@ class MultiChainCommunity(Community):
                     # TODO Note that you still expect a signature request for these bytes:
                     # pending[peer] = (up, down)
 
+    def get_pending_bytes(self, mid):
+        """
+        Get the bytes that are pending inclusion into a multichain block for the member with the given mid. If the mid is not known, it will return a (0,0) tuple
+        :param mid: mid of the member for which we want to know the pending bytes
+        :return a tuple consisting of the bytes up and bytes down respectively
+        """
+        try:
+            return self.pending_bytes[mid]
+        except KeyError:
+            return (0, 0)
 
 class MultiChainCommunityCrawler(MultiChainCommunity):
     """
