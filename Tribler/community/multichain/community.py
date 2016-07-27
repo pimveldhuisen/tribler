@@ -192,34 +192,44 @@ class MultiChainCommunity(Community):
             :param message The message containing the received signature request.
         """
         mid = message.authentication.members[0].mid.encode('hex')
-        pending = self.get_pending_bytes(mid)
+        pending = self.get_bytes_pending(mid)
         self.logger.info("Received signature request for: [Up = " + str(message.payload.up) + "MB | Down = " +
                          str(message.payload.down) + " MB]\n" +
-                         "We have pending: [Up = " + str(pending[0]) +
-                         "MB | Down = " + str(pending[1]) + " MB]")
+                         "We have pending for " + str(mid) + ": [Up = " + str(pending[1] / MEGA_DIVIDER) +
+                         "MB | Down = " + str(pending[0] / MEGA_DIVIDER) + " MB]")
+
+
 
         # TODO: This code always signs a request. Checks and rejects should be inserted here!
         # TODO: Like basic total_up == previous_total_up + block.up or more sophisticated chain checks.
         payload = message.payload
 
         # The up and down values are reversed for the responder.
-        total_up_responder, total_down_responder = self._get_next_total(payload.down, payload.up)
-        sequence_number_responder = self._get_next_sequence_number()
-        previous_hash_responder = self._get_latest_hash()
+        pending_mb_down = pending[0] / MEGA_DIVIDER
+        pending_mb_up = pending[1] / MEGA_DIVIDER
 
-        payload = (payload.up, payload.down, payload.total_up_requester, payload.total_down_requester,
-                   payload.sequence_number_requester, payload.previous_hash_requester,
-                   total_up_responder, total_down_responder,
-                   sequence_number_responder, previous_hash_responder)
+        if payload.down * 0.9 < pending_mb_down < payload.down * 1.1 and payload.up * 0.9 < pending_mb_up < payload.up * 1.1:
 
-        meta = self.get_meta_message(SIGNATURE)
+            # The up and down values are reversed for the responder.
+            total_up_responder, total_down_responder = self._get_next_total(payload.down, payload.up)
+            sequence_number_responder = self._get_next_sequence_number()
+            previous_hash_responder = self._get_latest_hash()
 
-        message = meta.impl(authentication=(message.authentication.members, message.authentication.signatures),
-                            distribution=(message.distribution.global_time,),
-                            payload=payload)
-        self.persist_signature_response(message)
-        self.logger.info("Sending signature response.")
-        return message
+            payload = (payload.up, payload.down, payload.total_up_requester, payload.total_down_requester,
+                       payload.sequence_number_requester, payload.previous_hash_requester,
+                       total_up_responder, total_down_responder,
+                       sequence_number_responder, previous_hash_responder)
+
+            meta = self.get_meta_message(SIGNATURE)
+
+            message = meta.impl(authentication=(message.authentication.members, message.authentication.signatures),
+                                distribution=(message.distribution.global_time,),
+                                payload=payload)
+            self.persist_signature_response(message)
+            self.logger.info("Sending signature response.")
+            return message
+        else:
+            self.logger.warning("Signature request for bytes that we cannot account for")
 
     def allow_signature_response(self, request, response, modified):
         """
@@ -416,7 +426,15 @@ class MultiChainCommunity(Community):
                     # TODO Note that you still expect a signature request for these bytes:
                     # pending[peer] = (up, down)
 
-    def get_pending_bytes(self, mid):
+    def increase_bytes_pending(self, mid, delta_up, delta_down):
+        # Update or create the values in the pending_bytes dict
+        if mid in self.pending_bytes:
+            self.pending_bytes[mid] += (delta_up, delta_down)
+        else:
+            self.pending_bytes[mid] = (delta_up, delta_down)
+            print "Now pending for " + str(mid) + ": " + str(self.pending_bytes[mid][0]) + " Up, " + str(self.pending_bytes[mid][1]) + " Down"
+
+    def get_bytes_pending(self, mid):
         """
         Get the bytes that are pending inclusion into a multichain block for the member with the given mid. If the mid is not known, it will return a (0,0) tuple
         :param mid: mid of the member for which we want to know the pending bytes

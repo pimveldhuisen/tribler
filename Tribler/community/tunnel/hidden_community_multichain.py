@@ -66,14 +66,12 @@ class HiddenTunnelCommunityMultichain(HiddenTunnelCommunity):
         elif isinstance(obj, TunnelExitSocket):
             key = self.circuits[obj.circuit_id].mid
         else:
+            print "This is not a proper thingy"
             return
 
-        # Update or create the values in the pending_bytes dict
-        if key in self.multichain_community.pending_bytes:
-            self.multichain_community.pending_bytes[key] += (delta_up, delta_down)
-        else:
-            self.multichain_community.pending_bytes[key] = (delta_up, delta_down)
-            print "key = " + key
+        self.multichain_community.increase_bytes_pending(key, delta_up, delta_down)
+
+
 
 
 
