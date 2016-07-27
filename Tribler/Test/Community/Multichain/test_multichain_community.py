@@ -15,6 +15,8 @@ from Tribler.dispersy.tests.debugcommunity.node import DebugNode
 from Tribler.dispersy.candidate import Candidate
 from Tribler.dispersy.requestcache import IntroductionRequestCache
 
+MEGA_DIVIDER = 1024*1024
+
 class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
     """
     Class that tests the MultiChainCommunity on an integration level.
@@ -58,6 +60,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
         failures = 0
         try:
+            # Increase the pending bytes on the other node, so that it will allow the request
+            other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                       down * MEGA_DIVIDER, up * MEGA_DIVIDER)
             _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
             other.give_message(signature_request, node)
             _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -65,6 +70,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         except StopIteration:
             failures += 1
         try:
+            # Increase the pending bytes on the 'node' node, so that it will allow the request
+            node.call(node.community.increase_bytes_pending, other._my_member._mid.encode('hex'),
+                      up * MEGA_DIVIDER, down * MEGA_DIVIDER)
             _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
             node.give_message(signature_request, other)
             _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -99,6 +107,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
         failures = 0
         try:
+            # Increase the pending bytes on the other node, so that it will allow the request
+            other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                       down * MEGA_DIVIDER, up * MEGA_DIVIDER)
             _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
             other.give_message(signature_request, node)
             _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -106,6 +117,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         except StopIteration:
             failures += 1
         try:
+            # Increase the pending bytes on the 'node' node, so that it will allow the request
+            node.call(node.community.increase_bytes_pending, other._my_member._mid.encode('hex'),
+                      up * MEGA_DIVIDER, down * MEGA_DIVIDER)
             _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
             node.give_message(signature_request, other)
             _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -129,10 +143,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         tunnel_other = TunnelExitSocket(None, None, None)
         up = 12
         down = 14
-        tunnel_node.bytes_up = up * 1024 * 1024
-        tunnel_node.bytes_down = down * 1024 * 1024
-        tunnel_other.bytes_up = down * 1024 * 1024
-        tunnel_other.bytes_down = up * 1024 * 1024
+        tunnel_node.bytes_up = up * MEGA_DIVIDER
+        tunnel_node.bytes_down = down * MEGA_DIVIDER
+        tunnel_other.bytes_up = down * MEGA_DIVIDER
+        tunnel_other.bytes_down = up * MEGA_DIVIDER
 
         # Act
         node.call(node.community.on_tunnel_remove, None, None, tunnel_node, target_other)
@@ -141,6 +155,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         # Since there is a tie breaker for requests, exactly one of the nodes should send a signature request
         failures = 0
         try:
+            # Increase the pending bytes on the other node, so that it will allow the request
+            other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                       down * MEGA_DIVIDER, up * MEGA_DIVIDER)
             _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
             other.give_message(signature_request, node)
             _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -148,6 +165,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         except StopIteration:
             failures += 1
         try:
+            # Increase the pending bytes on the 'node' node, so that it will allow the request
+            node.call(node.community.increase_bytes_pending, other._my_member._mid.encode('hex'),
+                      up * MEGA_DIVIDER, down * MEGA_DIVIDER)
             _, signature_request = node.receive_message(names=[u"dispersy-signature-request"]).next()
             node.give_message(signature_request, other)
             _, signature_response = other.receive_message(names=[u"dispersy-signature-response"]).next()
@@ -182,7 +202,7 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         other.send_identity(node)
         target_other = self._create_target(node, other)
         # Act
-        node.call(node.community.schedule_block, target_other, 5 * 1024 * 1024, 10 * 1024 * 1024 + 42000)
+        node.call(node.community.schedule_block, target_other, 5 * MEGA_DIVIDER, 10 * MEGA_DIVIDER + 42000)
         _, message = other.receive_message(names=[u"dispersy-signature-request"]).next()
         # Assert
         self.assertTrue(message)
@@ -224,6 +244,9 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         # Assert: Block should now be in the database of the node as halfsigned
         block = node.call(node.community.persistence.get_latest_block, node.community._public_key)
         self.assertEquals(block.hash_responder, EMPTY_HASH)
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 10 * MEGA_DIVIDER)
         # Ignore source, as it is a Candidate. We need to use DebugNodes in test.
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
         # Act
@@ -252,6 +275,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         node, other = self.create_nodes(2)
         other.send_identity(node)
         target_other = self._create_target(node, other)
+
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 10 * MEGA_DIVIDER)
 
         node.call(node.community.publish_signature_request_message, target_other, 10, 5)
         # Ignore source, as it is a Candidate. We need to use DebugNodes in test.
@@ -292,6 +319,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         target_other_from_node = self._create_target(node, other)
         target_other_from_crawler = self._create_target(crawler, other)
 
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
+
         node.call(node.community.publish_signature_request_message, target_other_from_node, 5, 5)
         # Create a block
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
@@ -316,6 +347,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         up_previous, down_previous = 5, 5
 
         target_other = self._create_target(node, other)
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
+
         node.call(node.community.publish_signature_request_message, target_other, up_previous, down_previous)
         # Create a block
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
@@ -348,6 +383,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         other.send_identity(node)
         other.send_identity(crawler)
         node.send_identity(crawler)
+
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
 
         target_other_from_node = self._create_target(node, other)
         target_other_from_crawler = self._create_target(crawler, other)
@@ -398,6 +437,10 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         target_other_from_node = self._create_target(node, other)
         target_other_from_crawler = self._create_target(crawler, other)
         target_node_from_crawler = self._create_target(crawler, node)
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
+
         node.call(node.community.publish_signature_request_message, target_other_from_node, 5, 5)
         # Create a block
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
@@ -437,12 +480,20 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         target_other_from_crawler = self._create_target(crawler, other)
         target_node_from_crawler = self._create_target(crawler, node)
 
+
         # Create blocks
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
         node.call(node.community.publish_signature_request_message, target_other_from_node, 5, 5)
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
         other.give_message(signature_request, node)
         _, signature_response = node.receive_message(names=[u"dispersy-signature-response"]).next()
         node.give_message(signature_response, node)
+
+        # Increase the pending bytes on the other node, so that it will allow the request
+        other.call(other.community.increase_bytes_pending, node._my_member._mid.encode('hex'),
+                   5 * MEGA_DIVIDER, 5 * MEGA_DIVIDER)
         node.call(node.community.publish_signature_request_message, target_other_from_node, 5, 5)
         _, signature_request = other.receive_message(names=[u"dispersy-signature-request"]).next()
         other.give_message(signature_request, node)
