@@ -3,8 +3,8 @@ import random
 from hashlib import sha256
 
 from Tribler.dispersy.crypto import ECCrypto
-from Tribler.community.multichain.block import (MultiChainBlock, GENESIS_HASH, EMPTY_SIG, GENESIS_SEQ, EMPTY_PK, VALID,
-                                                INVALID, NO_INFO, PARTIAL, PARTIAL_NEXT, PARTIAL_PREV)
+from Tribler.community.multichain.block import (MultiChainBlock, GENESIS_HASH, EMPTY_SIG, GENESIS_SEQ, EMPTY_PK,
+                                                ValidationResult)
 from Tribler.Test.Community.Multichain.test_multichain_utilities import MultiChainTestCase, TestBlock
 
 
@@ -111,7 +111,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], VALID)
+        self.assertEqual(result[0], ValidationResult.valid)
 
     def test_validate_non_existing(self):
         # Arrange
@@ -122,7 +122,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], VALID)
+        self.assertEqual(result[0], ValidationResult.valid)
 
     def test_validate_no_info(self):
         # Arrange
@@ -132,8 +132,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block4.validate(db)
         # Assert
-        self.assertEqual(result, (NO_INFO, ['No blocks are known for this member before or after the queried '
-                                            'sequence number']))
+        self.assertEqual(result, (ValidationResult.no_info, []))
 
     def test_validate_partial_prev(self):
         # Arrange
@@ -144,7 +143,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL_PREV)
+        self.assertEqual(result[0], ValidationResult.partial_previous)
 
     def test_validate_partial_next(self):
         # Arrange
@@ -155,7 +154,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block3.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL_NEXT)
+        self.assertEqual(result[0], ValidationResult.partial_next)
 
     def test_validate_partial_prev_with_gap(self):
         # Arrange
@@ -171,7 +170,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL_PREV)
+        self.assertEqual(result[0], ValidationResult.partial_previous)
 
     def test_validate_partial_next_with_gap(self):
         # Arrange
@@ -183,7 +182,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL_NEXT)
+        self.assertEqual(result[0], ValidationResult.partial_next)
 
     def test_validate_partial_left_gap(self):
         # Arrange
@@ -194,7 +193,18 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block3.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL)
+        self.assertEqual(result[0], ValidationResult.partial)
+
+    def test_validate_partial_right_gap_from_genesis(self):
+        # Arrange
+        db = self.MockDatabase()
+        (block1, _, block3, _) = self.setup_validate()
+        db.add_block(block1)
+        db.add_block(block3)
+        # Act
+        result = block1.validate(db)
+        # Assert
+        self.assertEqual(result[0], ValidationResult.partial_next)
 
     def test_validate_partial_right_gap(self):
         # Arrange
@@ -208,7 +218,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block1.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL)
+        self.assertEqual(result[0], ValidationResult.partial)
 
     def test_validate_partial_with_both_gaps(self):
         # Arrange
@@ -223,7 +233,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], PARTIAL)
+        self.assertEqual(result[0], ValidationResult.partial)
 
     def test_validate_existing_up(self):
         # Arrange
@@ -238,7 +248,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total up is lower than expected compared to the preceding block', result[1])
 
     def test_validate_existing_down(self):
@@ -254,7 +264,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total down is lower than expected compared to the preceding block', result[1])
 
     def test_validate_existing_total_up(self):
@@ -270,7 +280,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total up is higher than expected compared to the next block', result[1])
 
     def test_validate_existing_total_down(self):
@@ -286,7 +296,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total down is higher than expected compared to the next block', result[1])
 
     def test_validate_existing_link_public_key(self):
@@ -302,7 +312,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Linked public key is not valid', result[1])
 
     def test_validate_existing_link_sequence_number(self):
@@ -318,7 +328,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Link sequence number does not match known block', result[1])
 
     def test_validate_existing_hash(self):
@@ -334,7 +344,7 @@ class TestBlocks(MultiChainTestCase):
         block2.sign(db.get(block2.public_key, block2.sequence_number).key)
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Previous hash is not equal to the hash id of the previous block', result[1])
 
     def test_validate_existing_fraud(self):
@@ -349,7 +359,7 @@ class TestBlocks(MultiChainTestCase):
         block3.sign(block2.key)
         result = block3.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Double sign fraud", result[1])
 
     def test_validate_seq_not_genesis(self):
@@ -361,7 +371,7 @@ class TestBlocks(MultiChainTestCase):
         block1.sign(block1.key)
         result = block1.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Sequence number implies previous hash should be Genesis ID', result[1])
 
     def test_validate_seq_genesis(self):
@@ -376,7 +386,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Sequence number implies previous hash should not be Genesis ID', result[1])
 
     def test_validate_genesis(self):
@@ -389,7 +399,7 @@ class TestBlocks(MultiChainTestCase):
         block1.sign(block1.key)
         result = block1.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Genesis block invalid total_up and/or up', result[1])
         self.assertIn('Genesis block invalid total_down and/or down', result[1])
 
@@ -405,7 +415,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total up is lower than expected compared to the preceding block', result[1])
 
     def test_validate_down(self):
@@ -420,7 +430,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total down is lower than expected compared to the preceding block', result[1])
 
     def test_validate_total_up(self):
@@ -435,7 +445,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total up is higher than expected compared to the next block', result[1])
 
     def test_validate_total_down(self):
@@ -450,7 +460,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Total down is higher than expected compared to the next block', result[1])
 
     def test_validate_hash(self):
@@ -465,7 +475,7 @@ class TestBlocks(MultiChainTestCase):
         block3.previous_hash = block2.hash
         result = block2.validate(db)
         # Assert
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn('Previous hash is not equal to the hash id of the previous block', result[1])
 
     def test_validate_not_sane_negatives(self):
@@ -477,7 +487,7 @@ class TestBlocks(MultiChainTestCase):
         block1.total_down = -10
         block1.total_up = -20
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Up field is negative", result[1])
         self.assertIn("Down field is negative", result[1])
         self.assertIn("Total up field is negative", result[1])
@@ -490,7 +500,7 @@ class TestBlocks(MultiChainTestCase):
         block1.up = 0
         block1.down = 0
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Up and down are zero", result[1])
 
     def test_validate_not_sane_sequence_number(self):
@@ -500,7 +510,7 @@ class TestBlocks(MultiChainTestCase):
         block1.sequence_number = 0
         block1.sign(block1.key)
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Sequence number is prior to genesis", result[1])
 
     def test_validate_not_sane_link_sequence_number(self):
@@ -509,7 +519,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         block1.link_sequence_number = -1
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Link sequence number not empty and is prior to genesis", result[1])
 
     def test_validate_not_sane_public_key(self):
@@ -519,7 +529,7 @@ class TestBlocks(MultiChainTestCase):
         block1.public_key = EMPTY_PK
         block1.sign(block1.key)
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Public key is not valid", result[1])
 
     def test_validate_not_sane_link_public_key(self):
@@ -529,7 +539,7 @@ class TestBlocks(MultiChainTestCase):
         block1.link_public_key = EMPTY_PK
         block1.sign(block1.key)
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Linked public key is not valid", result[1])
 
     def test_validate_not_sane_self_signed(self):
@@ -539,7 +549,7 @@ class TestBlocks(MultiChainTestCase):
         block1.link_public_key = block1.public_key
         block1.sign(block1.key)
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Self signed block", result[1])
 
     def test_validate_not_sane_invalid_signature(self):
@@ -548,7 +558,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         block1.signature = EMPTY_SIG
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Invalid signature", result[1])
 
     def test_validate_linked_valid(self):
@@ -558,7 +568,7 @@ class TestBlocks(MultiChainTestCase):
         # Act
         db.add_block(MultiChainBlock.create(db, block1.link_public_key, block1))
         result = block1.validate(db)
-        self.assertEqual(result[0], VALID)
+        self.assertEqual(result[0], ValidationResult.valid)
 
     def test_validate_linked_up(self):
         db = self.MockDatabase()
@@ -568,7 +578,7 @@ class TestBlocks(MultiChainTestCase):
         db.add_block(MultiChainBlock.create(db, block1.link_public_key, block1))
         block1.up += 5
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Up/down mismatch on linked block", result[1])
 
     def test_validate_linked_down(self):
@@ -579,7 +589,7 @@ class TestBlocks(MultiChainTestCase):
         db.add_block(MultiChainBlock.create(db, block1.link_public_key, block1))
         block1.down -= 5
         result = block1.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Down/up mismatch on linked block", result[1])
 
     def test_validate_linked_mismatch(self):
@@ -590,7 +600,7 @@ class TestBlocks(MultiChainTestCase):
         db.add_block(block1)
         block3 = MultiChainBlock.create(db, block2.link_public_key, block1)
         result = block3.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Public key mismatch on linked block", result[1])
 
     def test_validate_linked_double_pay_fraud(self):
@@ -601,7 +611,7 @@ class TestBlocks(MultiChainTestCase):
         db.add_block(MultiChainBlock.create(db, block1.link_public_key, block1))
         block2 = MultiChainBlock.create(db, block1.link_public_key, block1)
         result = block2.validate(db)
-        self.assertEqual(result[0], INVALID)
+        self.assertEqual(result[0], ValidationResult.invalid)
         self.assertIn("Double countersign fraud", result[1])
 
     def setup_validate(self):
@@ -616,6 +626,14 @@ class TestBlocks(MultiChainTestCase):
         block3 = TestBlock(previous=block2)
         block4 = TestBlock()
         return block1, block2, block3, block4
+
+    def test_validation_results(self):
+        self.assertIsNone(ValidationResult.invalid())
+        self.assertIsNone(ValidationResult.no_info())
+        self.assertIsNone(ValidationResult.partial())
+        self.assertIsNone(ValidationResult.partial_next())
+        self.assertIsNone(ValidationResult.partial_previous())
+        self.assertIsNone(ValidationResult.valid())
 
     class MockDatabase(object):
         def __init__(self, *args, **kwargs):

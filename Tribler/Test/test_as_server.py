@@ -47,7 +47,6 @@ defaults.sessdefaults['dispersy']['dispersy_port'] = -1
 OUTPUT_DIR = os.path.abspath(os.environ.get('OUTPUT_DIR', 'output'))
 
 
-
 class BaseTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):

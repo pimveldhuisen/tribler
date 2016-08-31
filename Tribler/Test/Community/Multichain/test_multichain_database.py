@@ -3,8 +3,7 @@ import os
 from math import pow
 
 from Tribler.Test.Community.Multichain.test_multichain_utilities import TestBlock, MultiChainTestCase
-from Tribler.community.multichain.database import MultiChainDB
-from Tribler.community.multichain.database import DATABASE_DIRECTORY
+from Tribler.community.multichain.database import MultiChainDB, DATABASE_DIRECTORY
 
 
 class TestDatabase(MultiChainTestCase):
