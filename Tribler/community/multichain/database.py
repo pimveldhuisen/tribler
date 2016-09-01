@@ -209,6 +209,30 @@ class MultiChainDB(Database):
         db_result = self.execute(db_query, (sequence_number, buffer(public_key))).fetchall()
         return [self._create_database_block(db_item) for db_item in db_result]
 
+    def get_completed_blocks_between(self, public_key_A, public_key_B):
+        """
+        Returns database blocks that correspond to interaction between certain peers, and are signed by both parties.
+        :param public_key_A: The public key corresponding to the member id of one of the members interacted with
+        :param public_key_B: The public key corresponding to the member id of one of the members interacted with
+        :return A list of DB Blocks that match the criteria
+        """
+        assert public_key_A != public_key_B, "Interactions cannot happen between two identical public keys "
+        db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                   u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                   u"signature_requester, hash_requester, " \
+                   u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                   u"signature_responder, hash_responder, insert_time " \
+                   u"FROM multi_chain " \
+                   u"WHERE ( " \
+                   u"(public_key_requester = ? AND public_key_responder = ?)" \
+                   u"OR" \
+                   u"(public_key_responder = ? AND public_key_requester = ?)" \
+                   u") AND sequence_number_responder != -1"
+
+        db_result = self.execute(db_query, (buffer(public_key_A), buffer(public_key_B),
+                                            buffer(public_key_A), buffer(public_key_B))).fetchall()
+        return [self._create_database_block(db_item) for db_item in db_result]
+
     def _create_database_block(self, db_result):
         """
         Create a Database block or return None.

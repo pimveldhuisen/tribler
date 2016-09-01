@@ -367,6 +367,21 @@ class MultiChainCommunity(Community):
             statistics["latest_block_down_mb"] = ""
         return statistics
 
+    @blocking_call_on_reactor_thread
+    def get_score(self, public_key):
+        """
+        Return the score that is calculated for this peer based on the known multichain records,
+        where score is determined such that peers with a higher score have contributed more to the network around you.
+        If the score cannot be determined, returns zero
+        :param public_key: The public key of the peer we want to retrive the score for
+        :returns The multichain score of the peer.
+
+        Currently implemented as a placeholder method,
+        where the score is equal to the number of blocks you have with this peer
+        """
+
+        return len(self.persistence.get_completed_blocks_between(public_key, self._public_key))
+
     def _get_next_total(self, up, down):
         """
         Returns the next total numbers of up and down incremented with the current interaction up and down metric.
