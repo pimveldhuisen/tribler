@@ -556,6 +556,45 @@ class TestMultiChainCommunity(AbstractServer, DispersyTestFunc):
         assert isinstance(statistics, dict), type(statistics)
         assert len(statistics) > 0
 
+    def test_get_score(self):
+        """
+        Test the get score method to give proper scores.
+        """
+        # Arrange
+        node_a, node_b, node_c = self.create_nodes(3)
+        node_a.send_identity(node_b)
+        node_b.send_identity(node_a)
+        node_a.send_identity(node_c)
+        node_c.send_identity(node_a)
+
+        target_node_b_from_node_a = self._create_target(node_a, node_b)
+        target_node_c_from_node_a = self._create_target(node_a, node_c)
+
+        # Create blocks:
+        # One block A<->B
+        node_a.call(node_a.community.publish_signature_request_message, target_node_b_from_node_a, 5, 5)
+        _, signature_request = node_b.receive_message(names=[u"dispersy-signature-request"]).next()
+        node_b.give_message(signature_request, node_a)
+        _, signature_response = node_a.receive_message(names=[u"dispersy-signature-response"]).next()
+        node_a.give_message(signature_response, node_a)
+        # Three blocks A<->C
+        for _ in range(3):
+            node_a.call(node_a.community.publish_signature_request_message, target_node_c_from_node_a, 5, 5)
+            _, signature_request = node_c.receive_message(names=[u"dispersy-signature-request"]).next()
+            node_c.give_message(signature_request, node_a)
+            _, signature_response = node_a.receive_message(names=[u"dispersy-signature-response"]).next()
+            node_a.give_message(signature_response, node_a)
+
+        # Assert
+        assert node_a.community.get_score(node_b._my_member.public_key) == 1
+        assert node_b.community.get_score(node_a._my_member.public_key) == 1
+
+        assert node_a.community.get_score(node_c._my_member.public_key) == 3
+        assert node_c.community.get_score(node_a._my_member.public_key) == 3
+
+        assert node_b.community.get_score(node_c._my_member.public_key) == 0
+        assert node_c.community.get_score(node_b._my_member.public_key) == 0
+
     @blocking_call_on_reactor_thread
     def assertBlocksInDatabase(self, node, amount):
         assert len(node.community.persistence.get_all_hash_requester()) == amount
