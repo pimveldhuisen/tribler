@@ -115,14 +115,16 @@ class SessionConfigInterface(object):
         path = section + '~' + option
         in_selected_ports = path in self.selected_ports
 
-        if in_selected_ports or settings_port == -1:
+        if in_selected_ports:
+            return self.selected_ports[path]
+        elif settings_port == -1:
             return self._get_random_port(path)
-        return settings_port
+        else:
+            return settings_port
 
     def _get_random_port(self, path):
-        if path not in self.selected_ports:
-            self.selected_ports[path] = get_random_port()
-            self._logger.debug(u"Get random port %d for [%s]", self.selected_ports[path], path)
+        self.selected_ports[path] = get_random_port()
+        self._logger.debug(u"Get random port %d for [%s]", self.selected_ports[path], path)
         return self.selected_ports[path]
 
     def set_state_dir(self, statedir):
