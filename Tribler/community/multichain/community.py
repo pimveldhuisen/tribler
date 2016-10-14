@@ -296,18 +296,19 @@ class MultiChainCommunity(Community):
         up = tunnel.bytes_up
         down = tunnel.bytes_down
         pk = candidate.get_member().public_key
-        # Tie breaker to prevent both parties from requesting
-        if up > down or up == down and self.my_member.public_key > pk:
-            self.register_task("sign_%s" % tunnel.circuit_id,
-                               reactor.callLater(5, self.sign_block, candidate, tunnel.bytes_up, tunnel.bytes_down))
-        else:
-            pend = self.pending_bytes.get(pk)
-            if not pend:
-                self.pending_bytes[pk] = PendingBytes(up,
-                                                      down,
-                                                      reactor.callLater(2 * 60, self.cleanup_pending, pk))
+        if up > 0 or down > 0:
+            # Tie breaker to prevent both parties from requesting
+            if up > down or up == down and self.my_member.public_key > pk:
+                self.register_task("sign_%s" % tunnel.circuit_id,
+                                   reactor.callLater(5, self.sign_block, candidate, tunnel.bytes_up, tunnel.bytes_down))
             else:
-                pend.add(up, down)
+                pend = self.pending_bytes.get(pk)
+                if not pend:
+                    self.pending_bytes[pk] = PendingBytes(up,
+                                                          down,
+                                                          reactor.callLater(2 * 60, self.cleanup_pending, pk))
+                else:
+                    pend.add(up, down)
 
     def cleanup_pending(self, public_key):
         self.pending_bytes.pop(public_key, None)
