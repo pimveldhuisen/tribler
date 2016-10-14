@@ -323,6 +323,7 @@ class TunnelCommunity(Community):
                 if attempts > 5:
                     raise e
                 else:
+                    print "Getting port failed, attempt: " + str(attempts) + ", port: " + str(e.port)
                     continue
 
             server_started = True
