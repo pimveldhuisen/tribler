@@ -179,6 +179,7 @@ class MultiChainCommunity(Community):
                 continue
             elif not self.persistence.contains(blk):
                 self.persistence.add_block(blk)
+                self.logger.info("Added block %s:%d", blk.public_key.encode("hex")[-8:], blk.sequence_number)
             else:
                 self.logger.debug("Received already known block (%s)", blk)
 
@@ -199,7 +200,7 @@ class MultiChainCommunity(Community):
                                     validation[0] == ValidationResult.partial or \
                                     validation[0] == ValidationResult.no_info:
                         # Note that this code does not cover the scenario where we obtain this block indirectly.
-
+                        self.logger.info("Result of validation of request block was: " + str(validation[0]))
                         self.send_crawl_request(message.candidate, max(GENESIS_SEQ, blk.sequence_number - 5))
                         # Correct pending bytes since we did not sign the block yet
                         pend.add(blk.down, blk.up)
