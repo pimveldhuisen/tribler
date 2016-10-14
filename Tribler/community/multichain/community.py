@@ -122,7 +122,7 @@ class MultiChainCommunity(Community):
         return [DefaultConversion(self), MultiChainConversion(self)]
 
     def send_block(self, candidate, block):
-        self.logger.debug("Sending block to %s (%s)", candidate.get_member().public_key.encode("hex")[-8:], block)
+        self.logger.info("Sending block to %s (%s)", candidate.get_member().public_key.encode("hex")[-8:], block)
         message = self.get_meta_message(HALF_BLOCK).impl(
             authentication=(self.my_member,),
             distribution=(self.claim_global_time(),),
@@ -170,18 +170,18 @@ class MultiChainCommunity(Community):
         We've received a half block, either because we sent a SIGNED message to some one or we are crawling
         :param messages The half block messages
         """
-        self.logger.debug("Received %d half block messages.", len(messages))
+        self.logger.info("Received %d half block messages.", len(messages))
         for message in messages:
             blk = message.payload.block
             validation = blk.validate(self.persistence)
-            self.logger.debug("Block validation result %s, %s, (%s)", validation[0], validation[1], blk)
+            self.logger.info("Block validation result %s, %s, (%s)", validation[0], validation[1], blk)
             if validation[0] == ValidationResult.invalid:
                 continue
             elif not self.persistence.contains(blk):
                 self.persistence.add_block(blk)
                 self.logger.info("Added block %s:%d", blk.public_key.encode("hex")[-8:], blk.sequence_number)
             else:
-                self.logger.debug("Received already known block (%s)", blk)
+                self.logger.info("Received already known block (%s)", blk)
 
             # Is this a request, addressed to us, and have we not signed it already?
             if blk.link_sequence_number == UNKNOWN_SEQ and \
