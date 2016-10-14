@@ -4,7 +4,7 @@ import random
 import time
 from collections import defaultdict
 from cryptography.exceptions import InvalidTag
-from twisted.internet.error import MessageLengthError
+from twisted.internet.error import MessageLengthError, CannotListenError
 
 from twisted.internet.defer import maybeDeferred, succeed
 
@@ -308,9 +308,24 @@ class TunnelCommunity(Community):
         self.register_task("do_circuits", LoopingCall(self.do_circuits)).start(5, now=True)
         self.register_task("do_ping", LoopingCall(self.do_ping)).start(PING_INTERVAL)
 
-        self.socks_server = Socks5Server(self, tribler_session.get_tunnel_community_socks5_listen_ports()
-                                         if tribler_session else self.settings.socks_listen_ports)
-        self.socks_server.start()
+        # Finding a port for the socks server can sometimes fail
+        # when a large number of different processes run on the same machine, usually in experiments
+        # This loop makes five attempts to claim a port
+        server_started = False
+        attempts = 0
+        while not server_started:
+            attempts += 1
+            self.socks_server = Socks5Server(self, tribler_session.get_tunnel_community_socks5_listen_ports()
+                                             if tribler_session else self.settings.socks_listen_ports)
+            try:
+                self.socks_server.start()
+            except CannotListenError as e:
+                if attempts > 5:
+                    raise e
+                else:
+                    continue
+
+            server_started = True
 
         if self.trsession:
             self.notifier = self.trsession.notifier
