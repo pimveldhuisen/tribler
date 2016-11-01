@@ -312,8 +312,7 @@ class TunnelCommunity(Community):
         self.register_task("do_circuits", LoopingCall(self.do_circuits)).start(5, now=True)
         self.register_task("do_ping", LoopingCall(self.do_ping)).start(PING_INTERVAL)
 
-        self.socks_server = Socks5Server(self, tribler_session.get_tunnel_community_socks5_listen_ports()
-                                         if tribler_session else self.settings.socks_listen_ports)
+        self.socks_server = Socks5Server(self, self.settings.socks_listen_ports)
         self.socks_server.start()
 
         if self.trsession:
