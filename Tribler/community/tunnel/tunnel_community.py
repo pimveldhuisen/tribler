@@ -214,7 +214,6 @@ class TunnelSettings(object):
         self.tunnel_logger = logging.getLogger('TunnelLogger')
 
         self.crypto = TunnelCrypto()
-        self.socks_listen_ports = range(1080, 1085)
 
         self.min_circuits = 4
         self.max_circuits = 8
@@ -230,9 +229,11 @@ class TunnelSettings(object):
         if tribler_session:
             self.become_exitnode = tribler_session.get_tunnel_community_exitnode_enabled()
             self.enable_multichain = tribler_session.get_enable_multichain()
+            self.socks_listen_ports = tribler_session.get_tunnel_community_socks5_listen_ports()
         else:
             self.become_exitnode = False
             self.enable_multichain = False
+            self.socks_listen_ports = range(1080, 1085)
 
 
 class ExitCandidate(object):
@@ -296,6 +297,9 @@ class TunnelCommunity(Community):
         self.trsession = self.settings = self.socks_server = None
 
     def initialize(self, tribler_session=None, settings=None):
+        print "BALALA"
+        print settings
+        print settings.socks_listen_ports
         self.trsession = tribler_session
         self.settings = settings if settings else TunnelSettings(tribler_session=tribler_session)
 
