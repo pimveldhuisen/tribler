@@ -298,6 +298,7 @@ class MultiChainCommunity(Community):
         assert isinstance(tunnel.bytes_up, int) and isinstance(tunnel.bytes_down, int),\
             "tunnel instance must provide byte counts in int"
 
+        print "MULTICHAIN: ON_TUNNEL_REMOVE"
         up = tunnel.bytes_up
         down = tunnel.bytes_down
         pk = candidate.get_member().public_key
