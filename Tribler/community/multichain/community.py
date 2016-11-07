@@ -70,9 +70,13 @@ class MultiChainCommunity(Community):
                           self.my_member.public_key.encode("hex"))
 
     def initialize(self, tribler_session=None):
+        print "Init multi, session ="
+        print tribler_session
         super(MultiChainCommunity, self).initialize()
         if tribler_session:
             self.notifier = tribler_session.notifier
+            print "Multichain Notifier:"
+            print self.notifier
             self.notifier.add_observer(self.on_tunnel_remove, NTFY_TUNNEL, [NTFY_REMOVE])
 
     @classmethod
@@ -139,6 +143,7 @@ class MultiChainCommunity(Community):
         :param bytes_down: The bytes you have downloaded from the peer in this interaction
         :param linked: The block that the requester is asking us to sign
         """
+        print "MULTICHAIN: SIGN BLOCK CALLED"
         # NOTE to the future: This method reads from the database, increments and then writes back. If in some future
         # this method is allowed to execute in parallel, be sure to lock from before .create upto after .add_block
         assert bytes_up is None and bytes_down is None and linked is not None or \
@@ -310,6 +315,7 @@ class MultiChainCommunity(Community):
                 self.register_task("sign_%s" % tunnel.circuit_id,
                                    reactor.callLater(5, self.sign_block, candidate, tunnel.bytes_up, tunnel.bytes_down))
             else:
+                print "MULTICHAIN: TIE BREAKER: NOT MY JOB"
                 pend = self.pending_bytes.get(pk)
                 if not pend:
                     self.pending_bytes[pk] = PendingBytes(up,
@@ -317,6 +323,8 @@ class MultiChainCommunity(Community):
                                                           reactor.callLater(2 * 60, self.cleanup_pending, pk))
                 else:
                     pend.add(up, down)
+        else:
+            print "MULTICHAIN: TINY ON TUNNEL REMOVE: " + str(up) + "," + str(down)
 
     def cleanup_pending(self, public_key):
         self.pending_bytes.pop(public_key, None)

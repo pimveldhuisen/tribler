@@ -322,6 +322,8 @@ class TunnelCommunity(Community):
         if self.trsession:
             self.notifier = self.trsession.notifier
             self.trsession.lm.tunnel_community = self
+            print "Tunnel Notifier:"
+            print self.notifier
 
     def self_is_connectable(self):
         return self._dispersy._connection_type == u"public"
