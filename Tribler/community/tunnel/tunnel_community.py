@@ -590,6 +590,7 @@ class TunnelCommunity(Community):
                 if candidate:
                     from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
                     self.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, circuit, candidate)
+                    print "MULTICHAIN: NOTIFING"
                 else:
                     self.tunnel_logger.warning("MULTICHAIN: Tunnel candidate not found for " + str(circuit.first_hop[0]) + ":" +str(circuit.first_hop[1]) )
             circuit.destroy()
@@ -640,6 +641,7 @@ class TunnelCommunity(Community):
                     if candidate:
                         from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
                         self.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, relay, candidate)
+                        print "MULTICHAIN: NOTIFING"
                     else:
                         self.tunnel_logger.warning(
                             "MULTICHAIN: Tunnel candidate not found for " + str(relay.sock_addr[0]) + ":" + str(
@@ -666,6 +668,7 @@ class TunnelCommunity(Community):
                 if candidate:
                     from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
                     self.notifier.notify(NTFY_TUNNEL, NTFY_REMOVE, exit_socket, candidate)
+                    print "MULTICHAIN: NOTIFING"
                 else:
                     self.tunnel_logger.warning("MULTICHAIN: Tunnel candidate not found for " + str(exit_socket.sock_addr[0]) + ":" + str(exit_socket.sock_addr[1]) )
             if exit_socket.enabled:
