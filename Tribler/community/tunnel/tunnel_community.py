@@ -496,6 +496,9 @@ class TunnelCommunity(Community):
         first_hop = None
 
         self.tunnel_logger.info("Creating a new circuit of length %d", goal_hops)
+        print "Candidates:"
+        for stuff in self.dispersy_yield_verified_candidates():
+            print stuff
 
         if not required_endpoint:
             for c in self.dispersy_yield_verified_candidates():
