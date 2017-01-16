@@ -180,3 +180,12 @@ class CrawlResumePayload(Payload):
     class Implementation(Payload.Implementation):
         def __init__(self, meta):
             super(CrawlResumePayload.Implementation, self).__init__(meta)
+
+
+class KeepAlivePayload(Payload):
+    """
+    Payload for message that maintains a NAT puncture with a live edge
+    """
+    class Implementation(Payload.Implementation):
+        def __init__(self, meta):
+            super(KeepAlivePayload.Implementation, self).__init__(meta)

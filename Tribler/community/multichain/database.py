@@ -211,6 +211,31 @@ class MultiChainDB(Database):
         db_result = self.execute(db_query, (sequence_number, buffer(public_key))).fetchall()
         return [self._create_database_block(db_item) for db_item in db_result]
 
+    def get_full_blocks_between(self, public_key_a, public_key_b):
+        """
+        Get direct interactions between the given identities that are signed by both parties
+        :param public_key_a: One of the public_keys to check interactions for
+        :param public_key_b: One of the public_keys to check interactions for
+        :return: A (possibly empty) list of half blocks that have a linked block
+         between the public_key_a and public_key_b
+        """
+        db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                   u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                   u"signature_requester, hash_requester, " \
+                   u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                   u"signature_responder, hash_responder, insert_time " \
+                   u"FROM multi_chain " \
+                   u"WHERE (" \
+                   u"( public_key_requester = ? AND public_key_responder = ? ) OR " \
+                   u"( public_key_requester = ? AND public_key_responder = ? ) " \
+                   u") AND hash_responder != ? " \
+                   u"ORDER BY insert_time"
+
+        db_result = self.execute(db_query, (buffer(public_key_a), buffer(public_key_b),
+                                            buffer(public_key_b), buffer(public_key_a),
+                                            buffer(EMPTY_HASH))).fetchall()
+        return [self._create_database_block(db_item) for db_item in db_result]
+
     def get_blocks(self, public_key, limit=100):
         """
         Returns database blocks identified by a specific public key (either of the requester or the responder).

@@ -6,18 +6,22 @@ Every node has a chain and these chains intertwine by blocks shared by chains.
 Full documentation will be available at http://repository.tudelft.nl/.
 """
 import logging
+import random
+from collections import OrderedDict
+from time import time
 import base64
 from twisted.internet.defer import inlineCallbacks
 
 from twisted.internet.task import LoopingCall
 from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
-from Tribler.dispersy.authentication import DoubleMemberAuthentication, MemberAuthentication
+from Tribler.dispersy.authentication import DoubleMemberAuthentication, MemberAuthentication, NoAuthentication
+from Tribler.dispersy.discovery.bootstrap import Bootstrap
 from Tribler.dispersy.resolution import PublicResolution
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.destination import CandidateDestination
 from Tribler.dispersy.community import Community
-from Tribler.dispersy.message import Message, DelayPacketByMissingMember
+from Tribler.dispersy.message import Message, DropMessage, DelayPacketByMissingMember
 from Tribler.dispersy.conversion import DefaultConversion
 from Tribler.community.multichain.payload import (SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,
                                                   CrawlResumePayload)
@@ -29,6 +33,8 @@ SIGNATURE = u"signature"
 CRAWL_REQUEST = u"crawl_request"
 CRAWL_RESPONSE = u"crawl_response"
 CRAWL_RESUME = u"crawl_resume"
+KEEP_ALIVE = u"keep_alive"
+TARGET_LIVE_EDGES = 10
 
 # Divide by this to convert from bytes to MegaBytes.
 MEGA_DIVIDER = 1024 * 1024
@@ -51,6 +57,8 @@ class MultiChainCommunity(Community):
 
         # No response is expected yet.
         self.expected_response = None
+
+        self._trusted_candidates = OrderedDict()
 
     def initialize(self, tribler_session=None):
         super(MultiChainCommunity, self).initialize()
@@ -119,7 +127,15 @@ class MultiChainCommunity(Community):
                     CandidateDestination(),
                     CrawlResumePayload(),
                     self._generic_timeline_check,
-                    self.received_crawl_resumption)]
+                    self.received_crawl_resumption),
+            Message(self, KEEP_ALIVE,
+                    NoAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CandidateDestination(),
+                    CrawlRequestPayload(),
+                    self._generic_timeline_check,
+                    lambda:None)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
@@ -420,6 +436,56 @@ class MultiChainCommunity(Community):
                 # else:
                     # TODO Note that you still expect a signature request for these bytes:
                     # pending[peer] = (up, down)
+
+    def take_step(self):
+
+        # Count the number of trusted candidates
+        for address in self._candidates:
+            if self._candidates[address].get_member():
+                if self.persistence.get_full_blocks_between(self.my_member.public_key,
+                                                            self._candidates[address].get_member().public_key):
+                    self._trusted_candidates[address] = self._candidates[address]
+
+        print self.get_trusted_edges()
+        # Send keep-alives to our trusted live edges
+        for candidate in self._trusted_candidates.items():
+            self.send_keep_alive(candidate[1])
+        # Check for eligible candidates
+        # TODO: walk only to eligible candidates
+        eligible_candidates = []
+        for candidate in self._candidates.items():
+            if candidate[1].is_eligible_for_walk(time()):
+                eligible_candidates.append(candidate[1])
+        # Pick a random eligble candidate and send an introduction request to it
+        if eligible_candidates:
+            candidate = random.choice(eligible_candidates)
+            self._logger.warning("%s %s taking step towards %s",
+                                 self.cid.encode("HEX"), self.get_classification(), candidate)
+            self.create_introduction_request(candidate, self.dispersy_enable_bloom_filter_sync)
+        else:
+            self._logger.warning("%s %s no candidate to take step", self.cid.encode("HEX"), self.get_classification())
+
+    def send_keep_alive(self, candidate):
+        if candidate.get_member():
+            self.logger.debug("Sending keep alive to to %s", candidate.get_member().public_key.encode("hex")[-8:])
+            message = self.get_meta_message(KEEP_ALIVE).impl(
+                distribution=(self.claim_global_time(),),
+                destination=(candidate,),
+                payload=(()))
+            self.dispersy.store_update_forward([message], False, False, True)
+
+    def dispersy_get_introduce_candidate(self, exclude_candidate=None):
+        if len(self._trusted_candidates) > 1:  # There are some candidates to pick from
+            candidate = None
+            while not (candidate and candidate != exclude_candidate):
+                candidate = random.choice(map(lambda x: x[1], self._trusted_candidates))
+        elif len(self._trusted_candidates) == 1:  # There might be a candidate but we should check if it's the exclude candidate
+            candidate = self._trusted_candidates.items[0]
+            if candidate == exclude_candidate:
+                candidate = None
+        else:  # There are no candidates to introduce
+            return None
+        return candidate
 
 
 class MultiChainCommunityCrawler(MultiChainCommunity):

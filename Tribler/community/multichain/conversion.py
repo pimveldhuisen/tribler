@@ -48,7 +48,8 @@ class MultiChainConversion(BinaryConversion):
 
     def __init__(self, community):
         super(MultiChainConversion, self).__init__(community, "\x01")
-        from Tribler.community.multichain.community import SIGNATURE, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME
+        from Tribler.community.multichain.community import SIGNATURE, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME\
+            , KEEP_ALIVE
 
         # Define Request Signature.
         self.define_meta_message(chr(1), community.get_meta_message(SIGNATURE),
@@ -59,6 +60,8 @@ class MultiChainConversion(BinaryConversion):
                                  self._encode_crawl_response, self._decode_crawl_response)
         self.define_meta_message(chr(4), community.get_meta_message(CRAWL_RESUME),
                                  self._encode_crawl_resume, self._decode_crawl_resume)
+        self.define_meta_message(chr(5), community.get_meta_message(KEEP_ALIVE),
+                                 self._encode_keep_alive, self._decode_keep_alive)
 
     @staticmethod
     def _encode_signature(message):
@@ -164,6 +167,23 @@ class MultiChainConversion(BinaryConversion):
         """
         return offset, placeholder.meta.payload.implement()
 
+    @staticmethod
+    def _encode_keep_alive(message):
+        """
+        Encode a keep alive response message.
+        :param message: Message.impl of CrawlResponsePayload.impl
+        :return encoding ready to be sent to the network of the message
+        """
+        return "",
+
+    @staticmethod
+    def _decode_keep_alive(placeholder, offset, payload):
+        """
+        Encode a crawl response message.
+        :param message: Message.impl of CrawlResponsePayload.impl
+        :return encoding ready to be sent to the network of the message
+        """
+        return offset, placeholder.meta.payload.implement()
 
 def split_function(payload):
     """
