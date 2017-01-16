@@ -3,8 +3,7 @@
 from os import path
 
 from Tribler.dispersy.database import Database
-from Tribler.community.multichain.block import MultiChainBlock
-
+from Tribler.community.multichain.block import MultiChainBlock, UNKNOWN_SEQ
 
 DATABASE_DIRECTORY = path.join(u"sqlite")
 # Path to the database location + dispersy._workingdirectory
@@ -134,6 +133,23 @@ class MultiChainDB(Database):
         return self._get(u"WHERE public_key = ? AND sequence_number = ? OR link_public_key = ? AND "
                          u"link_sequence_number = ?", (buffer(block.link_public_key), block.link_sequence_number,
                                                        buffer(block.public_key), block.sequence_number))
+
+    def get_full_blocks_between(self, public_key_a, public_key_b):
+        """
+        Get direct interactions between the given identities that are signed by both parties
+        :param public_key_a: One of the public_keys to check interactions for
+        :param public_key_b: One of the public_keys to check interactions for
+        :return: A (possibly empty) list of half blocks that have a linked block
+         between the public_key_a and public_key_b
+        """
+        return self._getall(u"WHERE "
+                            u"(public_key = ? AND link_public_key = ? "
+                            u"OR "
+                            u"public_key = ? AND link_public_key = ? ) "
+                            u"AND linked_sequence_number != ?"
+                            , (buffer(public_key_a), buffer(public_key_b),
+                               buffer(public_key_b), buffer(public_key_a),
+                               UNKNOWN_SEQ))
 
     def crawl(self, public_key, sequence_number, limit=25):
         assert limit < 100, "Don't fetch too much"

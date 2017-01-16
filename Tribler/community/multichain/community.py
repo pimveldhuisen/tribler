@@ -7,17 +7,19 @@ Full documentation will be available at http://repository.tudelft.nl/.
 """
 
 import logging
+import random
+from time import time
 
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 from Tribler.Core.CacheDB.sqlitecachedb import forceDBThread
 from Tribler.Core.simpledefs import NTFY_TUNNEL, NTFY_REMOVE
-from Tribler.dispersy.authentication import MemberAuthentication
+from Tribler.dispersy.authentication import MemberAuthentication, NoAuthentication
 from Tribler.dispersy.resolution import PublicResolution
 from Tribler.dispersy.distribution import DirectDistribution
 from Tribler.dispersy.destination import CandidateDestination
 from Tribler.dispersy.community import Community
-from Tribler.dispersy.message import Message
+from Tribler.dispersy.message import Message, DropMessage
 from Tribler.dispersy.conversion import DefaultConversion
 
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
@@ -28,7 +30,9 @@ from Tribler.community.multichain.conversion import MultiChainConversion
 
 HALF_BLOCK = u"half_block"
 CRAWL = u"crawl"
+KEEP_ALIVE = u"keep_alive"
 MIN_TRANSACTION_SIZE = 1024*1024
+TARGET_LIVE_EDGES = 10
 
 
 class PendingBytes(object):
@@ -121,7 +125,15 @@ class MultiChainCommunity(Community):
                     CandidateDestination(),
                     CrawlRequestPayload(),
                     self._generic_timeline_check,
-                    self.received_crawl_request)]
+                    self.received_crawl_request),
+            Message(self, KEEP_ALIVE,
+                    NoAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CandidateDestination(),
+                    CrawlRequestPayload(),
+                    self._generic_timeline_check,
+                    lambda:None)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
@@ -328,6 +340,54 @@ class MultiChainCommunity(Community):
 
     def cleanup_pending(self, public_key):
         self.pending_bytes.pop(public_key, None)
+
+    def take_step(self):
+        # Send keep-alives to our live edges
+        for candidate in self._candidates:
+            self.send_keep_alive(candidate)
+        # Check for eligible candidates
+        eligible_candidates = []
+        for candidate in self._candidates:
+            if candidate.is_eligible_for_walk(time()):
+                eligible_candidates.append(candidate)
+        # Pick a random eligble candidate and send an introduction request to it
+        if eligible_candidates:
+            candidate = random.choice(eligible_candidates)
+            self._logger.warning("%s %s taking step towards %s",
+                                 self.cid.encode("HEX"), self.get_classification(), candidate)
+            self.create_introduction_request(candidate, self.dispersy_enable_bloom_filter_sync)
+        else:
+            self._logger.warning("%s %s no candidate to take step", self.cid.encode("HEX"), self.get_classification())
+
+    def send_keep_alive(self, candidate):
+        self.logger.debug("Sending keep alive to to %s", candidate.get_member().public_key.encode("hex")[-8:])
+        message = self.get_meta_message(KEEP_ALIVE).impl(
+            authentication=(self.my_member,),
+            distribution=(self.claim_global_time(),),
+            destination=(candidate,),
+            payload=(()))
+        self.dispersy.store_update_forward([message], False, False, True)
+
+    def dispersy_get_introduce_candidate(self, exclude_candidate=None):
+        if len(self._candidates) > 1:  # There are some candidates to pick from
+            candidate = None
+            while not (candidate and candidate != exclude_candidate):
+                candidate = random.choice(self._candidates)
+        elif len(self._candidates) == 1:  # There might be a candidate but we should check if it's the exclude candidate
+            candidate = self._candidates.items[0]
+            if candidate == exclude_candidate:
+                candidate = None
+        else:  # There are no candidates to introduce
+            return None
+        return candidate
+
+    def check_introduction_response(self, messages):
+        for message in super(MultiChainCommunity, self).check_introduction_response(messages):
+            if not self.persistence.get_full_blocks_between(self.my_member.public_key,
+                                                            message.candidate.get_member().public_key):
+                yield DropMessage(message, "I have no multichain records with this candidate")
+            else:
+                yield message
 
 
 class MultiChainCommunityCrawler(MultiChainCommunity):
