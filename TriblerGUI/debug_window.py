@@ -42,8 +42,10 @@ class DebugWindow(QMainWindow):
         elif index == 2:
             self.load_multichain_tab()
         elif index == 3:
-            self.dispersy_tab_changed(self.window().dispersy_tab_widget.currentIndex())
+            self.load_trust_edges_tab()
         elif index == 4:
+            self.dispersy_tab_changed(self.window().dispersy_tab_widget.currentIndex())
+        elif index == 5:
             self.load_events_tab()
 
     def dispersy_tab_changed(self, index):
@@ -56,6 +58,16 @@ class DebugWindow(QMainWindow):
         item = QTreeWidgetItem(widget)
         item.setText(0, key)
         item.setText(1, "%s" % value)
+        widget.addTopLevelItem(item)
+
+    def create_and_add_widget_peer(self, values, widget):
+        assert isinstance(values, dict)
+        assert len(values) == 4
+        item = QTreeWidgetItem(widget)
+        item.setText(0, "%s" % values["id"])
+        item.setText(1, "%s" % values["number_of_blocks"])
+        item.setText(2, "%s" % values["last_block_time"])
+        item.setText(3, "%s" % values["node_type"])
         widget.addTopLevelItem(item)
 
     def load_general_tab(self):
@@ -93,6 +105,16 @@ class DebugWindow(QMainWindow):
         self.window().multichain_tree_widget.clear()
         for key, value in data["statistics"].iteritems():
             self.create_and_add_widget_item(key, value, self.window().multichain_tree_widget)
+
+    def load_trust_edges_tab(self):
+        self.request_mgr = TriblerRequestManager()
+        self.request_mgr.perform_request("multichain/trust-edges", self.on_trust_edges)
+
+    def on_trust_edges(self, data):
+        self.window().trust_edges_tree_widget.clear()
+        for candidate in data["trust-edges"]:
+            self.create_and_add_widget_peer(candidate, self.window().trust_edges_tree_widget)
+
 
     def load_dispersy_general_tab(self):
         self.request_mgr = TriblerRequestManager()

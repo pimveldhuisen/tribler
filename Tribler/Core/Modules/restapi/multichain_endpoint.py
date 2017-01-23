@@ -14,7 +14,7 @@ class MultichainEndpoint(resource.Resource):
     def __init__(self, session):
         resource.Resource.__init__(self)
 
-        child_handler_dict = {"statistics": MultichainStatsEndpoint, "blocks": MultichainBlocksEndpoint}
+        child_handler_dict = {"statistics": MultichainStatsEndpoint, "blocks": MultichainBlocksEndpoint, "trust-edges": MultichainTrustEdgesEndpoint}
 
         for path, child_cls in child_handler_dict.iteritems():
             self.putChild(path, child_cls(session))
@@ -145,3 +145,65 @@ class MultichainBlocksIdentityEndpoint(MultichainBaseEndpoint):
 
         blocks = mc_community.persistence.get_blocks(base64.decodestring(self.identity), limit_blocks)
         return json.dumps({"blocks": [block.to_dictionary() for block in blocks]})
+
+
+class MultichainTrustEdgesEndpoint(resource.Resource):
+    """
+    This class handles requests regarding the trusted live edges information.
+    """
+
+    def __init__(self, session):
+        resource.Resource.__init__(self)
+        self.session = session
+
+    def get_multichain_community(self):
+        """
+        Search for the multichain community in the dispersy communities.
+        """
+        for community in self.session.get_dispersy_instance().get_communities():
+            if isinstance(community, MultiChainCommunity):
+                return community
+        return None
+
+    def render_GET(self, request):
+        """
+        .. http:get:: /multichain/trust-edges
+
+        A GET request to this endpoint returns information about the current trusted live edges
+
+            **Example request**:
+
+            .. sourcecode:: none
+
+                curl -X GET http://localhost:8085/multichain/trust-edges
+
+            **Example response**:
+
+            .. sourcecode:: javascript
+
+                {
+                    "trust-edges":
+                    [
+                        {
+                            "id": "MEAwEAYHKoZIzj0CAQYFK4EEAAEDLAAEBF7U/0J3rIkVWoxRMUetPKzU41BbAuFggbJONKz5xDUk\nTx3dMqdzkFHY",
+                            "number_of_blocks": 0,
+                            "last_block_time": "Never",
+                            "node_type": "Bootstrap"
+                        },
+
+                        {
+                            "id": "MEAwEAYHKoZIzj0CAQYFK4EEAAEDLAAEBV/QD6bccykf3vtqf2dDnKtk9U0PBHqKPWUb9LWxWBVo\nl6A7qQubezMJ",
+                            "number_of_blocks": 0,
+                            "last_block_time": "2020-01-20 15:15:15",
+                            "node_type": "default"
+                        }
+                    ]
+                }
+
+        """
+        mc_community = self.get_multichain_community()
+        if not mc_community:
+            request.setResponseCode(http.NOT_FOUND)
+            return json.dumps({"error": "multichain community not found"})
+
+        return json.dumps({'trust-edges': mc_community.get_trusted_edges()})

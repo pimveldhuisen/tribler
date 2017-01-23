@@ -388,6 +388,27 @@ class MultiChainCommunity(Community):
             statistics["latest_block_down_mb"] = ""
         return statistics
 
+    @blocking_call_on_reactor_thread
+    def get_trusted_edges(self):
+        trust_edges = []
+        for candidate in self._trusted_candidates.items() + filter(lambda x: x[0] in Bootstrap.get_default_addresses(), self.candidates.items()):
+            if candidate[1].get_member():
+                candidate_info = OrderedDict()
+                candidate_public_key = candidate[1].get_member().public_key
+                candidate_info["id"] = base64.encodestring(candidate_public_key).strip()
+                blocks = self.persistence.get_full_blocks_between(self.my_member.public_key, candidate_public_key)
+                candidate_info["number_of_blocks"] = len(blocks)
+                if blocks:
+                    candidate_info["last_block_time"] = blocks[-1].insert_time
+                else:
+                    candidate_info["last_block_time"] = u"Never"
+                if candidate[0] in Bootstrap.get_default_addresses():
+                    candidate_info["node_type"] = u"Bootstrap"
+                else:
+                    candidate_info["node_type"] = u"default"
+                trust_edges.append(candidate_info)
+        return trust_edges
+
     def _get_next_total(self, up, down):
         """
         Returns the next total numbers of up and down incremented with the current interaction up and down metric.

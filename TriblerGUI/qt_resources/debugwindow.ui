@@ -156,6 +156,58 @@
       </widget>
       <widget class="QWidget" name="tab_4">
        <attribute name="title">
+        <string>Trust Edges</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QTreeWidget" name="trust_edges_tree_widget">
+          <property name="columnCount">
+           <number>4</number>
+          </property>
+          <attribute name="headerDefaultSectionSize">
+           <number>200</number>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Shared Records</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Last Record</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Node Type</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_5">
+       <attribute name="title">
         <string>Dispersy</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -179,7 +231,7 @@
           <property name="currentIndex">
            <number>0</number>
           </property>
-          <widget class="QWidget" name="tab_6">
+          <widget class="QWidget" name="tab_7">
            <attribute name="title">
             <string>General</string>
            </attribute>
@@ -221,7 +273,7 @@
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="tab_7">
+          <widget class="QWidget" name="tab_8">
            <attribute name="title">
             <string>Communities</string>
            </attribute>
@@ -277,7 +329,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_5">
+      <widget class="QWidget" name="tab_6">
        <attribute name="title">
         <string>Events</string>
        </attribute>
