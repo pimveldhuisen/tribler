@@ -129,13 +129,13 @@ class MultiChainCommunity(Community):
                     self._generic_timeline_check,
                     self.received_crawl_resumption),
             Message(self, KEEP_ALIVE,
-                    NoAuthentication(),
+                    MemberAuthentication(),
                     PublicResolution(),
                     DirectDistribution(),
                     CandidateDestination(),
                     CrawlRequestPayload(),
                     self._generic_timeline_check,
-                    lambda:None)]
+                    lambda x:None)]
 
     def initiate_conversions(self):
         return [DefaultConversion(self), MultiChainConversion(self)]
@@ -459,7 +459,6 @@ class MultiChainCommunity(Community):
                     # pending[peer] = (up, down)
 
     def take_step(self):
-
         # Count the number of trusted candidates
         for address in self._candidates:
             if self._candidates[address].get_member():
@@ -490,6 +489,7 @@ class MultiChainCommunity(Community):
         if candidate.get_member():
             self.logger.debug("Sending keep alive to to %s", candidate.get_member().public_key.encode("hex")[-8:])
             message = self.get_meta_message(KEEP_ALIVE).impl(
+                authentication=(self.my_member,),
                 distribution=(self.claim_global_time(),),
                 destination=(candidate,),
                 payload=(()))
@@ -499,9 +499,9 @@ class MultiChainCommunity(Community):
         if len(self._trusted_candidates) > 1:  # There are some candidates to pick from
             candidate = None
             while not (candidate and candidate != exclude_candidate):
-                candidate = random.choice(map(lambda x: x[1], self._trusted_candidates))
+                candidate = random.choice(list(self._trusted_candidates.itervalues()))
         elif len(self._trusted_candidates) == 1:  # There might be a candidate but we should check if it's the exclude candidate
-            candidate = self._trusted_candidates.items[0]
+            candidate = random.choice(list(self._trusted_candidates.itervalues()))
             if candidate == exclude_candidate:
                 candidate = None
         else:  # There are no candidates to introduce
