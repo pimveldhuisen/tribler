@@ -55,6 +55,7 @@ class MultiChainCommunity(Community):
         self.persistence = MultiChainDB(self.dispersy, self.dispersy.working_directory)
         self.logger.debug("The multichain community started with Public Key: %s", base64.encodestring(self._public_key))
 
+        self.crawl_requests_received = 0
         # No response is expected yet.
         self.expected_response = None
 
@@ -306,6 +307,7 @@ class MultiChainCommunity(Community):
 
     def received_crawl_request(self, messages):
         for message in messages:
+            self.crawl_requests_received += 1
             self.logger.info("Crawler: Received crawl request from node %s, from sequence number %d",
                              base64.encodestring(message.candidate.get_member().mid).strip(),
                               message.payload.requested_sequence_number)
