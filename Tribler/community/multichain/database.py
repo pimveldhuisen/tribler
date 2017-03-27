@@ -347,6 +347,29 @@ class MultiChainDB(Database):
         return (db_result[0], db_result[1]) if db_result is not None and db_result[0] is not None \
                                                and db_result[1] is not None else (0, 0)
 
+    #Gumby experiment queries:
+    def get_requester_identities(self):
+        db_query = u"SELECT DISTINCT public_key_requester FROM multi_chain"
+        db_result = self.execute(db_query).fetchall()
+        return map(lambda x: x[0], db_result)
+
+    def get_requester_blocks(self, public_key):
+        """
+        Returns database blocks where the requester is identified by a specific public key.
+        :param public_key: The public key corresponding to the member id
+        :return A list of DB Blocks that match the criteria
+        """
+        db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                   u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                   u"signature_requester, hash_requester, " \
+                   u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                   u"signature_responder, hash_responder, insert_time " \
+                   U"FROM `multi_chain` " \
+                   u"WHERE public_key_requester = ? " \
+                   u"ORDER BY sequence_number_requester ASC "
+        db_result = self.execute(db_query, (public_key,)).fetchall()
+        return [self._create_database_block(db_item) for db_item in db_result]
+
     def open(self, initial_statements=True, prepare_visioning=True):
         return super(MultiChainDB, self).open(initial_statements, prepare_visioning)
 
