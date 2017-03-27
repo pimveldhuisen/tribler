@@ -60,6 +60,7 @@ class MultiChainCommunity(Community):
         self.expected_response = None
 
         self._trusted_candidates = OrderedDict()
+        self.walking_enabled = False
 
     def initialize(self, tribler_session=None):
         super(MultiChainCommunity, self).initialize()
@@ -460,32 +461,41 @@ class MultiChainCommunity(Community):
                     # TODO Note that you still expect a signature request for these bytes:
                     # pending[peer] = (up, down)
 
-    def take_step(self):
-        # Count the number of trusted candidates
-        for address in self._candidates:
-            if self._candidates[address].get_member():
-                if self.persistence.get_full_blocks_between(self.my_member.public_key,
-                                                            self._candidates[address].get_member().public_key):
-                    self._trusted_candidates[address] = self._candidates[address]
+    def start_trust_walk(self):
+        self.walking_enabled = True
 
-        print self.get_trusted_edges()
-        # Send keep-alives to our trusted live edges
-        for candidate in self._trusted_candidates.items():
-            self.send_keep_alive(candidate[1])
-        # Check for eligible candidates
-        # TODO: walk only to eligible candidates
-        eligible_candidates = []
-        for candidate in self._candidates.items():
-            if candidate[1].is_eligible_for_walk(time()):
-                eligible_candidates.append(candidate[1])
-        # Pick a random eligble candidate and send an introduction request to it
-        if eligible_candidates:
-            candidate = random.choice(eligible_candidates)
-            self._logger.warning("%s %s taking step towards %s",
-                                 self.cid.encode("HEX"), self.get_classification(), candidate)
-            self.create_introduction_request(candidate, self.dispersy_enable_bloom_filter_sync)
-        else:
-            self._logger.warning("%s %s no candidate to take step", self.cid.encode("HEX"), self.get_classification())
+    def take_step(self):
+        if self.walking_enabled:
+            # Count the number of trusted candidates
+            for address in self._candidates:
+                if self._candidates[address].get_member():
+                    if self.persistence.get_full_blocks_between(self.my_member.public_key,
+                                                                self._candidates[address].get_member().public_key):
+                        self._trusted_candidates[address] = self._candidates[address]
+
+            print self.get_trusted_edges()
+            # Send keep-alives to our trusted live edges
+            for candidate in self._trusted_candidates.items():
+                self.send_keep_alive(candidate[1])
+            # Check for eligible candidates
+            # TODO: walk only to eligible candidates
+            eligible_candidates = []
+            for candidate in self._candidates.items():
+                if candidate[1].is_eligible_for_walk(time()):
+                    eligible_candidates.append(candidate[1])
+            # Pick a random eligble candidate and send an introduction request to it
+            if eligible_candidates:
+                candidate = random.choice(eligible_candidates)
+                self._logger.warning("%s %s taking step towards %s",
+                                     self.cid.encode("HEX"), self.get_classification(), candidate)
+                self.create_introduction_request(candidate, self.dispersy_enable_bloom_filter_sync)
+            else:
+                self._logger.warning("%s %s no candidate to take step", self.cid.encode("HEX"), self.get_classification())
+
+    def on_introduction_response(self, messages):
+        super(MultiChainCommunity, self).on_introduction_response(messages)
+        for message in messages:
+            self.send_crawl_request(message.candidate)
 
     def send_keep_alive(self, candidate):
         if candidate.get_member():
