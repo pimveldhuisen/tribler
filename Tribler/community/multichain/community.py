@@ -70,23 +70,7 @@ class MultiChainCommunity(Community):
 
     @classmethod
     def get_master_members(cls, dispersy):
-        # generated: Fri Jul 1 15:22:20 2016
-        # curve: None
-        # len:571 bits ~ 144 bytes signature
-        # pub: 170 3081a7301006072a8648ce3d020106052b81040027038192000407afa96c83660dccfbf02a45b68f4bc
-        # 4957539860a3fe1ad4a18ccbfc2a60af1174e1f5395a7917285d09ab67c3d80c56caf5396fc5b231d84ceac23627
-        # 930b4c35cbfce63a49805030dabbe9b5302a966b80eefd7003a0567c65ccec5ecde46520cfe1875b1187d469823d
-        # 221417684093f63c33a8ff656331898e4bc853bcfaac49bc0b2a99028195b7c7dca0aea65
-        # pub-sha1 15ade4f5fb0f0f8019d8430473aaba4305e61753
-        # -----BEGIN PUBLIC KEY-----
-        # MIGnMBAGByqGSM49AgEGBSuBBAAnA4GSAAQHr6lsg2YNzPvwKkW2j0vElXU5hgo/4a1KGMy/wqYK8RdOH1OVp5FyhdCatnw9g
-        # MVsr1OW/FsjHYTOrCNieTC0w1y/zmOkmAUDDau+m1MCqWa4Du/XADoFZ8ZczsXs3kZSDP4YdbEYfUaYI9IhQXaECT9jwzqP9l
-        # YzGJjkvIU7z6rEm8CyqZAoGVt8fcoK6mU=
-        # -----END PUBLIC KEY-----
-        master_key = "3081a7301006072a8648ce3d020106052b81040027038192000407afa96c83660dccfbf02a45b68f4bc" + \
-                     "4957539860a3fe1ad4a18ccbfc2a60af1174e1f5395a7917285d09ab67c3d80c56caf5396fc5b231d84ceac23627" + \
-                     "930b4c35cbfce63a49805030dabbe9b5302a966b80eefd7003a0567c65ccec5ecde46520cfe1875b1187d469823d" + \
-                     "221417684093f63c33a8ff656331898e4bc853bcfaac49bc0b2a99028195b7c7dca0aea65"
+        master_key = "3081a7301006072a8648ce3d020106052b81040027038192000404455f15afdcdd9b5276316a3f760b84cfc3642da425d25f6c27a0d65440cbe8e7d4431eb6fcbe01cf659872b112a51307fb8c8ed3123924737a55991746fb3f3ec2d4480692021500694097902015b46a9ca0c88083c014a5e2ad93eee38c900d84c9644f89badc9d63bccb6df526a3f48b662aa2aaa144ebdd3431b625decc9d39274f152ecb767ddaa15e163c46e2"
         master_key_hex = master_key.decode("HEX")
         master = dispersy.get_member(public_key=master_key_hex)
         return [master]
