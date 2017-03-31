@@ -32,6 +32,9 @@ append_size = calcsize(append_format)
 crawl_request_format = 'i'
 crawl_request_size = calcsize(crawl_request_format)
 
+discovery_request_format = 'i i i'
+discovery_request_size = calcsize(discovery_request_format)
+
 # [signature, pk]
 authentication_format = str(PK_LENGTH) + 's ' + str(SIG_LENGTH) + 's '
 # [Up, Down, TotalUpRequester, TotalDownRequester, sequence_number_requester, previous_hash_requester,
@@ -49,7 +52,7 @@ class MultiChainConversion(BinaryConversion):
     def __init__(self, community):
         super(MultiChainConversion, self).__init__(community, "\x01")
         from Tribler.community.multichain.community import SIGNATURE, CRAWL_REQUEST, CRAWL_RESPONSE, CRAWL_RESUME\
-            , KEEP_ALIVE
+            , KEEP_ALIVE, DISCOVERY_REQUEST
 
         # Define Request Signature.
         self.define_meta_message(chr(1), community.get_meta_message(SIGNATURE),
@@ -62,6 +65,8 @@ class MultiChainConversion(BinaryConversion):
                                  self._encode_crawl_resume, self._decode_crawl_resume)
         self.define_meta_message(chr(5), community.get_meta_message(KEEP_ALIVE),
                                  self._encode_keep_alive, self._decode_keep_alive)
+        self.define_meta_message(chr(6), community.get_meta_message(DISCOVERY_REQUEST),
+                                 self._encode_discovery_request, self._decode_discovery_request)
 
     @staticmethod
     def _encode_signature(message):
@@ -117,6 +122,34 @@ class MultiChainConversion(BinaryConversion):
 
         values = unpack_from(crawl_request_format, data, offset)
         offset += crawl_request_size
+
+        return offset, placeholder.meta.payload.implement(*values)
+
+    @staticmethod
+    def _encode_discovery_request(message):
+        """
+        Encode a discovery request message.
+        :param message: Message.impl of CrawlRequestPayload.impl
+        return encoding ready to be sent of the network of the message
+        """
+        return pack(discovery_request_format, message.payload.sequence_number_head,
+                    message.payload.sequence_number_tail,
+                    message.payload.number_of_blocks),
+
+    @staticmethod
+    def _decode_discovery_request(placeholder, offset, data):
+        """
+        Decode an incoming discovery request message.
+        :param placeholder:
+        :param offset: Start of the CrawlRequest message in the data.
+        :param data: ByteStream containing the message.
+        :return: (offset, CrawlRequest.impl)
+        """
+        if len(data) < offset + discovery_request_size:
+            raise DropPacket("Unable to decode the payload")
+
+        values = unpack_from(discovery_request_format, data, offset)
+        offset += discovery_request_size
 
         return offset, placeholder.meta.payload.implement(*values)
 

@@ -23,14 +23,15 @@ from Tribler.dispersy.destination import CandidateDestination
 from Tribler.dispersy.community import Community
 from Tribler.dispersy.message import Message, DropMessage, DelayPacketByMissingMember
 from Tribler.dispersy.conversion import DefaultConversion
-from Tribler.community.multichain.payload import (SignaturePayload, CrawlRequestPayload, CrawlResponsePayload,
-                                                  CrawlResumePayload)
+from Tribler.community.multichain.payload import (SignaturePayload, CrawlRequestPayload, DiscoveryRequestPayload,
+                                                  CrawlResponsePayload, CrawlResumePayload)
 from Tribler.community.multichain.database import MultiChainDB, DatabaseBlock
 from Tribler.community.multichain.conversion import MultiChainConversion, split_function, GENESIS_ID
 from Tribler.dispersy.util import blocking_call_on_reactor_thread
 
 SIGNATURE = u"signature"
 CRAWL_REQUEST = u"crawl_request"
+DISCOVERY_REQUEST = u"discovery_request"
 CRAWL_RESPONSE = u"crawl_response"
 CRAWL_RESUME = u"crawl_resume"
 KEEP_ALIVE = u"keep_alive"
@@ -56,6 +57,7 @@ class MultiChainCommunity(Community):
         self.logger.debug("The multichain community started with Public Key: %s", base64.encodestring(self._public_key))
 
         self.crawl_requests_received = 0
+        self.discovery_requests_received = 0
         # No response is expected yet.
         self.expected_response = None
 
@@ -98,6 +100,14 @@ class MultiChainCommunity(Community):
                     CrawlRequestPayload(),
                     self._generic_timeline_check,
                     self.received_crawl_request),
+            Message(self, DISCOVERY_REQUEST,
+                    MemberAuthentication(),
+                    PublicResolution(),
+                    DirectDistribution(),
+                    CandidateDestination(),
+                    DiscoveryRequestPayload(),
+                    self._generic_timeline_check,
+                    self.received_discovery_request),
             Message(self, CRAWL_RESPONSE,
                     MemberAuthentication(),
                     PublicResolution(),
@@ -324,6 +334,49 @@ class MultiChainCommunity(Community):
             # Or rather, the other side is requesting blocks starting from a point in the future.
             self.logger.info("Crawler: No blocks")
 
+    def send_discovery_request(self, candidate, number_of_blocks, sequence_number_range=None):
+        if sequence_number_range is None:
+            sequence_number_head = self.persistence.get_latest_sequence_number(candidate.get_member().public_key)
+            sequence_number_tail = self.persistence.get_sequence_number_tail(candidate.get_member().public_key)
+        else:
+            assert isinstance(sequence_number_range, tuple)
+            assert len(sequence_number_range) == 2
+            sequence_number_head, sequence_number_tail = sequence_number_range
+
+        self.logger.error("Sending discovery request around range %d,%d limit %d", sequence_number_head, sequence_number_tail, number_of_blocks)
+        meta = self.get_meta_message(DISCOVERY_REQUEST)
+        message = meta.impl(authentication=(self.my_member,),
+                            distribution=(self.claim_global_time(),),
+                            destination=(candidate,),
+                            payload=(sequence_number_head, sequence_number_tail, number_of_blocks))
+        self.dispersy.store_update_forward([message], False, False, True)
+
+    def received_discovery_request(self, messages):
+        for message in messages:
+            self.discovery_requests_received += 1
+            self.logger.error("Discovery: Received discovery request from node %s, around range %d,%d, limit %d",
+                             base64.encodestring(message.candidate.get_member().mid).strip(),
+                             message.payload.sequence_number_head, message.payload.sequence_number_tail,
+                             message.payload.number_of_blocks)
+            self.discovery_requested(message.candidate,  message.payload.sequence_number_head,
+                                     message.payload.sequence_number_tail,
+                                     message.payload.number_of_blocks)
+
+    def discovery_requested(self, candidate, sequence_number_head, sequence_number_tail, number_of_blocks):
+        blocks = self.persistence.get_blocks_around(self._public_key, sequence_number_head, sequence_number_tail, number_of_blocks)
+        if len(blocks) > 0:
+            self.logger.error("Discovery: Sending %d blocks", len(blocks))
+            messages = [self.get_meta_message(CRAWL_RESPONSE)
+                            .impl(authentication=(self.my_member,),
+                                  distribution=(self.claim_global_time(),),
+                                  destination=(candidate,),
+                                  payload=block.to_payload()) for block in blocks]
+            self.dispersy.store_update_forward(messages, False, False, True)
+        else:
+            # This is slightly worrying since the last block should always be returned.
+            # Or rather, the other side is requesting blocks starting from a point in the future.
+            self.logger.error("Discovery: No blocks")
+
     def received_crawl_response(self, messages):
         self.logger.debug("Crawler: Valid %d block response(s) received.", len(messages))
         for message in messages:
@@ -479,7 +532,7 @@ class MultiChainCommunity(Community):
     def on_introduction_response(self, messages):
         super(MultiChainCommunity, self).on_introduction_response(messages)
         for message in messages:
-            self.send_crawl_request(message.candidate)
+            self.send_discovery_request(message.candidate, 5)
 
     def send_keep_alive(self, candidate):
         if candidate.get_member():

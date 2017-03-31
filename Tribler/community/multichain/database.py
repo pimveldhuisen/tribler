@@ -211,6 +211,53 @@ class MultiChainDB(Database):
         db_result = self.execute(db_query, (sequence_number, buffer(public_key))).fetchall()
         return [self._create_database_block(db_item) for db_item in db_result]
 
+    def get_blocks_around(self, public_key, sequence_number_head, sequence_number_tail, number_of_blocks):
+        """
+        Returns database blocks around the interval specified by sequence_number_head, sequence_number_tail
+        prefering newer blocks if possible.
+        :param public_key: The public key corresponding to the member id
+        :return A list of DB Blocks that match the criteria
+        """
+        db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                   u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                   u"signature_requester, hash_requester, " \
+                   u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                   u"signature_responder, hash_responder, insert_time " \
+                   u"FROM (" \
+                   u"SELECT *, sequence_number_requester AS sequence_number," \
+                   u" public_key_requester AS public_key FROM `multi_chain` " \
+                   u"UNION " \
+                   u"SELECT *, sequence_number_responder AS sequence_number," \
+                   u" public_key_responder AS public_key FROM `multi_chain`) " \
+                   u"WHERE sequence_number > ? AND public_key = ? " \
+                   u"ORDER BY sequence_number ASC " \
+                   u"LIMIT ?"
+        db_result = self.execute(db_query, (sequence_number_head, buffer(public_key), number_of_blocks)).fetchall()
+        newer_blocks = [self._create_database_block(db_item) for db_item in db_result]
+        self._logger.error("Found %d newer blocks", len(newer_blocks))
+        if len(newer_blocks) < number_of_blocks:
+            extra_blocks_needed = number_of_blocks - len(newer_blocks)
+            db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
+                       u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
+                       u"signature_requester, hash_requester, " \
+                       u"total_up_responder, total_down_responder, sequence_number_responder, previous_hash_responder, " \
+                       u"signature_responder, hash_responder, insert_time " \
+                       u"FROM (" \
+                       u"SELECT *, sequence_number_requester AS sequence_number," \
+                       u" public_key_requester AS public_key FROM `multi_chain` " \
+                       u"UNION " \
+                       u"SELECT *, sequence_number_responder AS sequence_number," \
+                       u" public_key_responder AS public_key FROM `multi_chain`) " \
+                       u"WHERE sequence_number < ? AND public_key = ? " \
+                       u"ORDER BY sequence_number ASC " \
+                       u"LIMIT ?"
+            db_result = self.execute(db_query, (sequence_number_tail, buffer(public_key),
+                                                extra_blocks_needed)).fetchall()
+            older_blocks = [self._create_database_block(db_item) for db_item in db_result]
+        else:
+            older_blocks = []
+        return newer_blocks + older_blocks
+
     def get_full_blocks_between(self, public_key_a, public_key_b):
         """
         Get direct interactions between the given identities that are signed by both parties
@@ -326,6 +373,27 @@ class MultiChainDB(Database):
                    u"SELECT sequence_number_responder AS sequence_number " \
                    u"FROM multi_chain WHERE public_key_responder = ? )"
         db_result = self.execute(db_query, (public_key, public_key)).fetchone()[0]
+        return db_result if db_result is not None else -1
+
+    def get_sequence_number_tail(self, public_key):
+        """
+        """
+        public_key = buffer(public_key)
+        db_query = u"SELECT MAX(left.sequence_number) FROM " \
+                   u"(SELECT sequence_number_requester AS sequence_number " \
+                   u"FROM multi_chain WHERE public_key_requester = ? UNION " \
+                   u"SELECT sequence_number_responder AS sequence_number " \
+                   u"FROM multi_chain WHERE public_key_responder = ? ) " \
+                   u"AS left " \
+                   u"LEFT OUTER JOIN " \
+                   u"(SELECT sequence_number_requester AS sequence_number " \
+                   u"FROM multi_chain WHERE public_key_requester = ? UNION " \
+                   u"SELECT sequence_number_responder AS sequence_number " \
+                   u"FROM multi_chain WHERE public_key_responder = ? ) " \
+                   u"AS right on right.sequence_number = left.sequence_number -1 " \
+                   u"WHERE right.sequence_number is null"
+
+        db_result = self.execute(db_query, (public_key,)*4).fetchone()[0]
         return db_result if db_result is not None else -1
 
     def get_total(self, public_key):

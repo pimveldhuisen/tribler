@@ -86,6 +86,31 @@ class CrawlRequestPayload(Payload):
             return self._requested_sequence_number
 
 
+class DiscoveryRequestPayload(Payload):
+    """
+    Request a crawl of blocks starting with a specific sequence number or the first if -1.
+    """
+
+    class Implementation(Payload.Implementation):
+        def __init__(self, meta, sequence_number_head, sequence_number_tail, number_of_blocks):
+            super(DiscoveryRequestPayload.Implementation, self).__init__(meta)
+            self._sequence_number_head = sequence_number_head
+            self._sequence_number_tail = sequence_number_tail
+            self._number_of_blocks = number_of_blocks
+
+        @property
+        def sequence_number_head(self):
+            return self._sequence_number_head
+
+        @property
+        def sequence_number_tail(self):
+            return self._sequence_number_tail
+
+        @property
+        def number_of_blocks(self):
+            return self._number_of_blocks
+
+
 class CrawlResponsePayload(Payload):
     """
     Payload for message that will respond to a Signature Request containing
