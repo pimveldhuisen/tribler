@@ -282,7 +282,7 @@ class MultiChainDB(Database):
                                             buffer(EMPTY_HASH))).fetchone()
         return int(db_result[0])
 
-    def get_last_full_blocks_between(self, public_key_a, public_key_b):
+    def get_last_full_block_between(self, public_key_a, public_key_b):
         """
         Get direct interactions between the given identities that are signed by both parties
         :param public_key_a: One of the public_keys to check interactions for
