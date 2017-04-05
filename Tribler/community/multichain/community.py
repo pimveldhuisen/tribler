@@ -436,10 +436,13 @@ class MultiChainCommunity(Community):
                 candidate_info = OrderedDict()
                 candidate_public_key = candidate[1].get_member().public_key
                 candidate_info["id"] = base64.encodestring(candidate_public_key).strip()
-                blocks = self.persistence.get_full_blocks_between(self.my_member.public_key, candidate_public_key)
-                candidate_info["number_of_blocks"] = len(blocks)
-                if blocks:
-                    candidate_info["last_block_time"] = blocks[-1].insert_time
+                number_of_blocks = self.persistence.get_number_of_full_blocks_between(self.my_member.public_key,
+                                                                                      candidate_public_key)
+                last_full_block = self.persistence.get_last_full_block_between(self.my_member.public_key,
+                                                                               candidate_public_key)
+                candidate_info["number_of_blocks"] = number_of_blocks
+                if number_of_blocks > 0:
+                    candidate_info["last_block_time"] = last_full_block.insert_time
                 else:
                     candidate_info["last_block_time"] = u"Never"
                 if candidate[0] in Bootstrap.get_default_addresses():
@@ -505,12 +508,12 @@ class MultiChainCommunity(Community):
         if self.walking_enabled:
             # Count the number of trusted candidates
             for address in self._candidates:
-                if self._candidates[address].get_member():
-                    if self.persistence.get_full_blocks_between(self.my_member.public_key,
-                                                                self._candidates[address].get_member().public_key):
-                        self._trusted_candidates[address] = self._candidates[address]
+                if address not in self._trusted_candidates:
+                    if self._candidates[address].get_member():
+                        if self.persistence.get_number_of_full_blocks_between(self.my_member.public_key,
+                                                                    self._candidates[address].get_member().public_key):
+                            self._trusted_candidates[address] = self._candidates[address]
 
-            print self.get_trusted_edges()
             # Send keep-alives to our trusted live edges
             for candidate in self._trusted_candidates.items():
                 self.send_keep_alive(candidate[1])
