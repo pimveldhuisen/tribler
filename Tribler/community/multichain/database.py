@@ -4,6 +4,9 @@ This file contains everything related to persistence for MultiChain.
 import base64
 from os import path
 from hashlib import sha256
+
+import time
+
 from Tribler.dispersy.database import Database
 from Tribler.community.multichain.conversion import (encode_block, encode_block_requester_half, encode_block_crawl,
                                                      EMPTY_HASH)
@@ -266,6 +269,7 @@ class MultiChainDB(Database):
         :return: A (possibly empty) list of half blocks that have a linked block
          between the public_key_a and public_key_b
         """
+        start = time.time()
         db_query = u"SELECT public_key_requester, public_key_responder, up, down, " \
                    u"total_up_requester, total_down_requester, sequence_number_requester, previous_hash_requester, " \
                    u"signature_requester, hash_requester, " \
@@ -281,7 +285,10 @@ class MultiChainDB(Database):
         db_result = self.execute(db_query, (buffer(public_key_a), buffer(public_key_b),
                                             buffer(public_key_b), buffer(public_key_a),
                                             buffer(EMPTY_HASH))).fetchall()
-        return [self._create_database_block(db_item) for db_item in db_result]
+        ret = [self._create_database_block(db_item) for db_item in db_result]
+        self._logger.error("Get full blocks between took %d milliseconds", (time.time()-start)*1000)
+        return ret
+
 
     def get_blocks(self, public_key, limit=100):
         """
